@@ -1,0 +1,23 @@
+# model parameters:
+
+--model yolov3-tiny
+--batch-size 12
+--img-size 416
+--anchors [30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
+#[10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
+
+# database and classes
+--dataset-type kzir
+--train-data ./kzir_yolo_v3/data/OID_train_noGroup.txt
+--val-data ./kzir_yolo_v3/data/OID_val_noGroup.txt
+
+# training parameters
+--epochs 500
+--lr 1e-3
+--gpu-ids 0,1
+--workers 32
+
+# checking point
+--checkpoint OID_Kzir_last_good.pth
+--output-path ./kzir_yolo_v3/results
+

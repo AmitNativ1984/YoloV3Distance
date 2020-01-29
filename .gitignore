@@ -1,0 +1,9 @@
+.idea/
+
+*.npy
+kitti_bbox_wh.txt
+
+*.pth
+*.onnx
+*events.out*
+*.weights

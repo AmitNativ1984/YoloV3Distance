@@ -1,0 +1,22 @@
+# model parameters:
+
+--model yolov3-tiny
+--batch-size 1
+--img-size 416
+--anchors [50,50],[100,100],[200,200]
+# [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
+
+# database and classes
+--val-data ./kzir_yolo_v3/data/vehicle_recordings.txt
+--num-classes 2
+
+# training parameters
+--gpu-ids 0
+
+# checking point
+--checkpoint OID_Kzir_last_good.pth
+--output-path ./kzir_yolo_v3/results/OID_Kzir_last_good.pth
+
+# inference threshold parameters
+--nms-thres 0.1  
+--conf-thres 0.5

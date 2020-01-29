@@ -1,0 +1,25 @@
+# model parameters:
+--model yolov3-tiny
+--batch-size 12
+--img-size 416
+--anchors [345,352],[155,344],[246,173],[25,40],[60,113],[82,227]
+
+#[10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
+
+# database and classes
+--dataset-type kitti
+--train-data ./kzir_yolo_v3/data/merged_kitti_vehicle_train.txt
+--val-data ./kzir_yolo_v3/data/vehicle_recordings.txt
+
+# training parameters
+--epochs 500
+--lr 1e-3
+--gpu-ids 0,1
+--workers 32
+
+# checking point
+--checkpoint Kitti_Vehicle_Day_last_good.pth
+--output-path ./kzir_yolo_v3/results
+
+# resume
+--resume ./kzir_yolo_v3/results/model_last_good.pth
