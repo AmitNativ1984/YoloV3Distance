@@ -189,6 +189,8 @@ class Trainer(object):
                         'best_pred': self.min_loss
                         }, model_outpath)
 
+            logging.info('validation loss imporoved! Model saved to: {}'.format(model_outpath))
+
         # writing epoch summaries to tensorboard:
         self.writer.add_scalar('val/total_loss_epoch', loss_total.item()/batch, epoch)
         self.writer.add_scalar('val/BboxLoss', bbox_loss.item()/batch, epoch)
