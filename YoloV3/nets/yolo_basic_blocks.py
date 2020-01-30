@@ -79,14 +79,14 @@ class YoloDetectionLayer(nn.Module):
         scaled_anchors = np.array([(a_w / scale_w, a_h / scale_h) for a_w, a_h in self.anchors])
 
         if scale_w == 32:
-            scaled_anchors = scaled_anchors[0:self.args.num_anchors_per_resolution, :]
+            anchors_idx = [0, 1, 2]
         elif scale_w == 16:
-            scaled_anchors = scaled_anchors[self.args.num_anchors_per_resolution:2*self.args.num_anchors_per_resolution, :]
-        else:
-            scaled_anchors = scaled_anchors[2*self.args.num_anchors_per_resolution:, :]
+            anchors_idx = [3, 4, 5]
+        elif scale_w == 8:
+            anchors_idx = [6, 7, 8]
 
         # reshaping backbone predictions to (batch_size, #anchors, h, w, bbox_attributes)
-        preds = backbone_out.view(batch_size, self.num_anchors, self.bbox_attrib, in_h, in_w)
+        preds = backbone_out.view(batch_size, self.args.num_anchors_per_resolution, self.bbox_attrib, in_h, in_w)
         preds = preds.permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
@@ -101,7 +101,7 @@ class YoloDetectionLayer(nn.Module):
             """ TRAINING """
 
             # build targets
-            mask, noobj_mask, x0, y0, w, h, gt_conf, gt_cls = self.get_target(gt_targets, scaled_anchors,
+            mask, noobj_mask, x0, y0, w, h, gt_conf, gt_cls = self.get_target(gt_targets, scaled_anchors, anchors_idx,
                                                                               in_w, in_h,
                                                                               self.iou_threshold)
 
@@ -211,7 +211,7 @@ class YoloDetectionLayer(nn.Module):
 
             return pred_out
 
-    def get_target(self, gt_targets, anchors, in_w, in_h, iou_threshold):
+    def get_target(self, gt_targets, anchors, anchors_idx, in_w, in_h, iou_threshold):
         """
         return the ground truth targets (bboxes) on grid of backbone last layer
         :param gt_targets = [batch_size, max_num_bbox, x, y, w, h, cls_idx]
@@ -228,6 +228,7 @@ class YoloDetectionLayer(nn.Module):
         t_conf = torch.zeros_like(mask, device=gt_targets_device)
         t_cls = torch.zeros(batch_size, self.num_anchors, in_h, in_w, self.num_classes, requires_grad=False, device=gt_targets_device)
 
+        anchors_idx = np.array(anchors_idx)
         # filling above tensors with gt_targets data
         for b in range(batch_size):
             for t in range(gt_targets.shape[1]):
@@ -250,33 +251,40 @@ class YoloDetectionLayer(nn.Module):
                 gt_box[:, 3] = g_h
 
                 # get shape of anchor box (w,h only)
-                anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((self.num_anchors, 2)),
+                anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((anchors.shape[0], 2)),
                                                                   anchors), 1))
 
                 # calculate iou between gt and anchor shape
                 anchors_ious = bbox_iou(gt_box, anchor_shapes)
 
                 # set noobj mask to zeros where iou > threshold (ignore):
-                noobj_mask[b, anchors_ious > iou_threshold, g_i, g_j] = 0
+                noobj_mask[b, anchors_ious[anchors_idx] > iou_threshold, g_i, g_j] = 0
 
                 # Find the best anchor
                 best_n = np.argmax(anchors_ious)
 
-                # Masks
-                mask[b, best_n, g_i, g_j] = 1
+                # updating masks to 1 only if anchor is in anchors_idx - which are anchors of current output resolution
+                # this ensures that for every object, only a single anchor is found in all resolutions
+                if best_n.item() in anchors_idx:
+                    # selecting the indx of anchor in current resolution.
+                    indx = list(range(len(anchors_idx)))
+                    best_n = indx[np.where(anchors_idx == best_n.item())[0][0]]
 
-                # Setting the anchor gt bbox coordinates:
-                t_x[b, best_n, g_i, g_j] = g_x - g_j
-                t_y[b, best_n, g_i, g_j] = g_y - g_i
+                    # Masks
+                    mask[b, best_n, g_i, g_j] = 1
 
-                t_w[b, best_n, g_i, g_j] = torch.log(g_w / anchors[best_n, 0] + 1e-16)
-                t_h[b, best_n, g_i, g_j] = torch.log(g_h / anchors[best_n, 1] + 1e-16)
+                    # Setting the anchor gt bbox coordinates:
+                    t_x[b, best_n, g_i, g_j] = g_x - g_j
+                    t_y[b, best_n, g_i, g_j] = g_y - g_i
 
-                # Object
-                t_conf[b, best_n, g_i, g_j] = 1
+                    t_w[b, best_n, g_i, g_j] = torch.log(g_w / anchors[best_n, 0] + 1e-16)
+                    t_h[b, best_n, g_i, g_j] = torch.log(g_h / anchors[best_n, 1] + 1e-16)
 
-                # Class one hot encoding
-                t_cls[b, best_n, g_i, g_j, int(gt_targets[b, t, -1])] = 1
+                    # Object
+                    t_conf[b, best_n, g_i, g_j] = 1
+
+                    # Class one hot encoding
+                    t_cls[b, best_n, g_i, g_j, int(gt_targets[b, t, -1])] = 1
 
         return mask, noobj_mask, t_x, t_y, t_w, t_h, t_conf, t_cls
 
