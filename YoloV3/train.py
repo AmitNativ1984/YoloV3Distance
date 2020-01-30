@@ -162,12 +162,24 @@ class Trainer(object):
                 pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
         epoch_total_loss = loss_total.item() / batch
+
+        if isinstance(model, torch.nn.DataParallel):
+            model_state_dict = self.model.module.state_dict()
+        else:
+            model_state_dict = self.model.state_dict()
+
+        # saving model to save file on every epoch
+        model_outpath = os.path.join(self.args.output_path, 'last_trained_epoch.pth')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model_state_dict,
+            'optimizer': self.optimizer.state_dict(),
+            'best_pred': self.min_loss
+        }, model_outpath)
+
+        # saving best results.
         if epoch_total_loss < self.min_loss:
             self.min_loss = epoch_total_loss
-            if isinstance(model, torch.nn.DataParallel):
-                model_state_dict = self.model.module.state_dict()
-            else:
-                model_state_dict = self.model.state_dict()
 
             model_outpath = os.path.join(self.args.output_path, self.args.checkpoint)
             torch.save({
@@ -176,20 +188,6 @@ class Trainer(object):
                         'optimizer': self.optimizer.state_dict(),
                         'best_pred': self.min_loss
                         }, model_outpath)
-
-
-            tqdm.write("Model saved to: {}".format(model_outpath))
-
-            # saving model to generic path (model_last_good.pth
-            default_outpath = os.path.join(self.args.output_path, "model_last_good.pth")
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model_state_dict,
-                'optimizer': self.optimizer.state_dict(),
-                'best_pred': self.min_loss
-            }, default_outpath)
-
-            tqdm.write("Model saved to: {}".format(default_outpath))
 
         # writing epoch summaries to tensorboard:
         self.writer.add_scalar('val/total_loss_epoch', loss_total.item()/batch, epoch)

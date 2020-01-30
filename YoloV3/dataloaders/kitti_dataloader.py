@@ -51,7 +51,7 @@ class KittiDataset(Dataset):
                 self.files.append(line.strip())
 
     def __len__(self):
-        return len(self.files)//50
+        return len(self.files)
 
     def __getitem__(self, index):
         img_path = self.files[index].rstrip()
