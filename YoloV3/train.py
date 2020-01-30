@@ -205,6 +205,7 @@ class Trainer(object):
 
         torch.cuda.empty_cache()
         logging.info('emptied cuda cache successfully')
+        logging.info('\n')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="kzir database data loader", fromfile_prefix_chars="@")
@@ -311,7 +312,7 @@ if __name__ == "__main__":
     if args.resume:
         # load trained model
         model.load_state_dict(torch.load(args.resume)["model_state_dict"])
-        logging.info('loaded model from: {}'.format(args.output_path))
+        logging.info('loaded model from: {}'.format(args.resume))
 
 
     # Multi GPU if possible:
