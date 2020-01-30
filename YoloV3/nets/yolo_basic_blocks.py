@@ -166,8 +166,8 @@ class YoloDetectionLayer(nn.Module):
             c_y = c_y.repeat(batch_size, self.num_anchors, 1, 1)
 
             # create tensors of anchor shapes
-            anchors_w = torch.Tensor(scaled_anchors[:, 0]).cuda()
-            anchors_h = torch.Tensor(scaled_anchors[:, 1]).cuda()
+            anchors_w = torch.Tensor(scaled_anchors[anchors_idx[0]:anchors_idx[-1]+1, 0]).cuda()
+            anchors_h = torch.Tensor(scaled_anchors[anchors_idx[0]:anchors_idx[-1]+1, 1]).cuda()
 
             # expnading the shape of anchors to (batch_size, #anchors, in_h, in_w)
             # each anchor shape is stored in different coordinate in #anchors dim: anchor_w[:,1,:,:]==anchor_w[:,2,:,:]
