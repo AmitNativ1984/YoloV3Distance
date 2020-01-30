@@ -3,14 +3,8 @@ import os
 import time
 from tqdm import tqdm
 
+def count_cls(source_path, cls_type_dict):
 
-if __name__ == "__main__":
-    source_path = "./YoloV3/data/merged_kitti_vehicle_train.txt"
-
-    cls_type_dict = {
-                '0': "Person",
-                '1': "Car",
-                }
     cls_count = np.zeros(np.size(np.unique(list(cls_type_dict.values()))))
 
     with open(source_path, 'r') as dataset:
@@ -33,4 +27,12 @@ if __name__ == "__main__":
         "Car": cls_count[1]
     }
 
-    print('cls [#] \n', cls_dict)
+    return cls_dict
+
+if __name__ == "__main__":
+    source_path = "./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_train.txt"
+
+    cls_type_dict = {
+                '0': "Person",
+                '1': "Car",
+                }

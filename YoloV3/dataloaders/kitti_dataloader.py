@@ -51,7 +51,7 @@ class KittiDataset(Dataset):
                 self.files.append(line.strip())
 
     def __len__(self):
-        return len(self.files)
+        return len(self.files)//50
 
     def __getitem__(self, index):
         img_path = self.files[index].rstrip()
@@ -192,7 +192,7 @@ class KittiDataset(Dataset):
             for line in f:
                 vec = line.split(' ')
                 cls = int(vec[0])
-                if cls != 0 and cls != 1:    # no window
+                if cls != 0 and cls != 1:
                     raise('wrong cls id in file: {}'.format(txt_file))
 
                 x0 = float(vec[1])
@@ -219,8 +219,21 @@ class KittiDataset(Dataset):
         return labels
 
     def class_count(self):
-        cls_count = [10925.0,   # Person
-                     35072.0]   # Car
+        from ..data.utils.count_cls import count_cls as countCls
+
+        cls_indx = list(self.label_decoding().values())
+        cls_indx = [str(i) for i in cls_indx]
+        cls_names = list(self.label_decoding().keys())
+        cls_dict = dict(zip(cls_indx, cls_names))
+
+        cls_count_dict = countCls(self.args.train_data, cls_dict)
+
+        cls_count = [None] * len(cls_names)
+        # turning dict to array in correct order of classes indx:
+        for cls_name in cls_names:
+            cls_count[self.label_decoding()[cls_name]] = cls_count_dict[cls_name]
+
+        print("\ncls count: {}\n".format(cls_count))
 
         return np.array(cls_count)
 

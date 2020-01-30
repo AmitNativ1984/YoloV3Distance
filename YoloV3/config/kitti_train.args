@@ -8,8 +8,8 @@
 
 # database and classes
 --dataset-type kitti
---train-data ./kzir_yolo_v3/data/merged_kitti_vehicle_train.txt
---val-data ./kzir_yolo_v3/data/vehicle_recordings.txt
+--train-data ./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_train.txt
+--val-data ./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_val.txt
 
 # training parameters
 --epochs 500
@@ -18,8 +18,8 @@
 --workers 32
 
 # checking point
---checkpoint Kitti_Vehicle_Day_last_good.pth
---output-path ./kzir_yolo_v3/results
+--checkpoint OID_Kitti_Vehicle.pth
+--output-path ./YoloV3/results/OID_Kitti_VehicleRecordings/
 
 # resume
---resume ./kzir_yolo_v3/results/model_last_good.pth
+--resume ./YoloV3/results/Kitti_Vehicle_Day_last_good.pth
