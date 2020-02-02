@@ -36,6 +36,40 @@ class MaxPoolPaddedStride1(nn.Module):
         x = nn.MaxPool2d(kernel_size=2, stride=1, padding=0)(x)
         return x
 
+class ResBlock(nn.Module):
+    def __init__(self, inplanes, planes):
+        super(ResBlock, self).__init__()
+
+        self.conv1 = conv2D_BN_LeakyRelu(inplanes=inplanes, outplanes=planes[0], kernelsize=1, stride=1, padding=0)
+        self.conv2 = conv2D_BN_LeakyRelu(inplanes=planes[0], outplanes=planes[1], kernelsize=3, stride=1, padding=1)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.conv2(out)
+
+        out += residual
+
+        return out
+
+class ConvSet(nn.Module):
+    def __init__(self, inplanes, planes):
+        super(ConvSet, self).__init__()
+
+        self.conv0 = conv2D_BN_LeakyRelu(inplanes=inplanes, outplanes=planes[0], kernelsize=1, stride=1, padding=0)
+        self.conv1 = conv2D_BN_LeakyRelu(inplanes=planes[0], outplanes=planes[1], kernelsize=3, stride=1, padding=1)
+        self.conv2 = conv2D_BN_LeakyRelu(inplanes=planes[1], outplanes=planes[0], kernelsize=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv0(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv1(x)
+        out = self.conv2(x)
+
+        return out
+
 class YoloDetectionLayer(nn.Module):
     """ YOLO loss layer. will be used during trainning """
 

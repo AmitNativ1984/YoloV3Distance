@@ -1,0 +1,22 @@
+# model parameters:
+
+--model yolov3-tiny
+--batch-size 1
+--img-size 416
+--anchors [345,352],[155,344],[246,173],[116,90],[60,113],[82,227]
+# [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
+
+# database and classes
+--val-data ./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_val.txt
+--num-classes 2
+
+# training parameters
+--gpu-ids 0
+
+# checking point
+--checkpoint OID_Kitti_Vehicle_yolov3.pth
+--output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3/
+
+# inference threshold parameters
+--nms-thres 0.1  
+--conf-thres 0.5

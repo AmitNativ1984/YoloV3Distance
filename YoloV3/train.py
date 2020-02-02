@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from YoloV3.dataloaders.kzir_dataloader import KzirDataset
 from YoloV3.dataloaders.kitti_dataloader import KittiDataset
 from YoloV3.nets.yolov3_tiny import YoloV3_tiny
+from YoloV3.nets.yolov3 import YoloV3
 from YoloV3.nets.yolo_basic_blocks import YoloDetectionLayer
 from YoloV3.detect import Inference
 from torchvision import transforms
@@ -85,19 +86,20 @@ class Trainer(object):
             self.optimizer.zero_grad()
             preds = model(image)
 
-            # calculate loss for every resolution
-            loss_out0 = self.yolo_loss(preds[0], bboxes)
-            loss_out1 = self.yolo_loss(preds[1], bboxes)
+            # collecting loss from each layer:
+            loss_total = torch.zeros([1], requires_grad=True).to(image.device)
+            for pred in preds:
 
-            loss_total = loss_out0[0] + loss_out1[0]
-            bbox_loss = loss_out0[1] + loss_out1[1]
-            objectness_loss = loss_out0[2] + loss_out1[2]
-            cls_loss = loss_out0[3] + loss_out1[3]
+                # calculate loss for every resolution
+                loss_out = self.yolo_loss(pred, bboxes)
 
-            LossTotal += loss_total.item()
-            BboxLoss += bbox_loss.item()
-            ObjectnessLoss += objectness_loss.item()
-            ClsLoss += cls_loss.item()
+                loss_total += loss_out[0]
+
+                # accumulating loss for logging message:
+                LossTotal += loss_out[0].item()
+                BboxLoss += loss_out[1].item()
+                ObjectnessLoss += loss_out[2].item()
+                ClsLoss += loss_out[3].item()
 
             curr_time = time.time()
             pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [sec]' % (LossTotal/batch,
@@ -203,8 +205,8 @@ class Trainer(object):
         out_images = Inference(infer_args, model).infer(num_batches=5)
         self.writer.add_image('detections', out_images, global_step=epoch, dataformats='NCWH')
 
-        torch.cuda.empty_cache()
-        logging.info('emptied cuda cache successfully')
+        # torch.cuda.empty_cache()
+        # logging.info('emptied cuda cache successfully')
         logging.info('\n')
 
 if __name__ == "__main__":
@@ -219,7 +221,7 @@ if __name__ == "__main__":
                         help = 'path to parent database root. its childern is images/ and /labels')
 
     parser.add_argument('--model', type=str, default='yolov3-tiny',
-                        choices=['yolov3-tiny'],
+                        choices=['yolov3-tiny', 'yolov3'],
                         help='yolo models. can be one of: yolov3-tiny, yolov3')
     parser.add_argument('--batch-size', type=int, default=14,
                         help='train batch size')
@@ -305,6 +307,8 @@ if __name__ == "__main__":
     # selecting model from user inputs
     if args.model == 'yolov3-tiny':
         model = YoloV3_tiny(args)
+    elif args.model == 'yolov3':
+        model = YoloV3(args)
     else:
         raise ("currently supporting only yolov3_tiny")
 
@@ -320,6 +324,7 @@ if __name__ == "__main__":
         logging.info("Using {} GPUs!".format(len(args.gpu_ids)))
         model = torch.nn.DataParallel(model)
         model.to(device)
+
 
     trainer = Trainer(args, model)
 

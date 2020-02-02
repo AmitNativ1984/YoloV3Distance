@@ -1,6 +1,6 @@
 # model parameters:
 --model yolov3-tiny
---batch-size 12
+--batch-size 128
 --img-size 416
 --anchors [345,352],[155,344],[246,173],[116,90],[60,113],[82,227]
 
@@ -22,4 +22,4 @@
 --output-path ./YoloV3/results/OID_Kitti_VehicleRecordings/
 
 # resume
---resume ./YoloV3/results/OID_Kitti_VehicleRecordings/OID_Kitti_Vehicle.pth
+--resume ./YoloV3/results/Kitti_Vehicle_Day_last_good.pth

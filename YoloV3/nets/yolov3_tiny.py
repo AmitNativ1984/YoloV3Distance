@@ -76,7 +76,7 @@ class YoloV3_tiny(nn.Module):
         y = self.conv2D_BN_LeakyRelu12(y)
         # 26x26x256
         out2 = self.conv2D_BN_LeakyRelu13(y)
-        # 13x13xnum_ouput_features
+        # 26x26xnum_ouput_features
 
         return out1, out2
 

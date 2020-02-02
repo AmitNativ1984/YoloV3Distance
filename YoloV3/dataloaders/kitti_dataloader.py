@@ -131,7 +131,7 @@ class KittiDataset(Dataset):
                       Normalize(p=1.0)])
 
         preform_augmentation = Compose(transforms, bbox_params=BboxParams(format='yolo',
-                                                                          min_visibility=0.2))
+                                                                          min_visibility=0.3))
         augmented_sample = preform_augmentation(**annotations)
 
         augmented_sample["bboxes"] = np.array(augmented_sample["bboxes"])
@@ -155,8 +155,7 @@ class KittiDataset(Dataset):
                        Normalize(p=1.0)])
 
         preform_augmentation = Compose(transforms, bbox_params=BboxParams(format='yolo',
-                                                                          min_area=0.0,
-                                                                          min_visibility=0.0))
+                                                                          min_visibility=0.3))
         augmented_sample = preform_augmentation(**annotations)
 
         augmented_sample["bboxes"] = np.array(augmented_sample["bboxes"])
