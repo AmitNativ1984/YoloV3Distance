@@ -201,8 +201,12 @@ if __name__ == "__main__":
     parser.add_argument('--anchors', type=str,
                         default='[10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]',
                         help='lists of anchors. each anchor are given as lists separated by coma: [x1,y1],[x2,y2],..')
-
-
+    parser.add_argument('--num-anchors-per-resolution', type=int,
+                        default=3,
+                        help='lists of anchors. each anchor are given as lists separated by coma: [x1,y1],[x2,y2],..')
+    parser.add_argument('--dataset-type', type=str,
+                        default='kzir',
+                        help='dataset type. one of kitti, kzir')
     # checking point
     parser.add_argument('--resume', type=str, default=None,
                         help='put the path to resuming file if needed')
@@ -210,6 +214,7 @@ if __name__ == "__main__":
                         help='set the checkpoint name')
     parser.add_argument('--output-path', type=str, default=os.getcwd() + "/YoloV3/results/model_best.pth",
                         help='output path')
+
 
     args, unknow_args = parser.parse_known_args()
 

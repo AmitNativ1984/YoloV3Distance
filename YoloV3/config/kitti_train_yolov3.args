@@ -1,6 +1,6 @@
 # model parameters:
 --model yolov3
---batch-size 14
+--batch-size 28
 --img-size 416
 --anchors [373,326],[156,198],[116,90],[59,119],[62,45],[30,61],[33,23],[16,30],[10,13]
 

@@ -13,13 +13,13 @@
 
 # training parameters
 --epochs 500
---lr 1e-3
+--lr 1e-4
 --gpu-ids 0,1
 --workers 32
 
 # checking point
 --checkpoint OID_Kitti_Vehicle.pth
---output-path ./YoloV3/results/OID_Kitti_VehicleRecordings/
+--output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/
 
 # resume
---resume ./YoloV3/results/Kitti_Vehicle_Day_last_good.pth
+--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/last_trained_epoch.pth
