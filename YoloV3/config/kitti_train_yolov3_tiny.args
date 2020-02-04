@@ -1,19 +1,19 @@
 # model parameters:
 --model yolov3-tiny
---batch-size 128
+--batch-size 64
 --img-size 416
---anchors [345,352],[155,344],[246,173],[116,90],[60,113],[82,227]
+--anchors [373,326],[156,198],[116,90],[59,119],[62,45],[30,61]
 
-#[10,13],[16,30],[33,23],[30,61],[62,45],[59,119],,[156,198],[373,326]
+# [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
 
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_train.txt
---val-data ./YoloV3/data/OID_LandVechile_Person_kitti_vehicleRecordings_day_thermal_val.txt
+--train-data ./YoloV3/data/datasets/vehicle_recordings_only/ben_shemen_07_01_2020_day.txt
+--val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only.txt
 
 # training parameters
 --epochs 500
---lr 1e-4
+--lr 1e-2
 --gpu-ids 0,1
 --workers 32
 
