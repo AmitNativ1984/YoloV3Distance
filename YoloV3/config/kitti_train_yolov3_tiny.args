@@ -2,24 +2,29 @@
 --model yolov3-tiny
 --batch-size 64
 --img-size 416
---anchors [373,326],[156,198],[116,90],[59,119],[62,45],[30,61]
+--anchors [85,51],[78,227],[55,166],[37,112],[46,27],[21,59]
 
 # [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
-
+#[[ 21  59]
+# [ 55 166]
+# [ 46  27]
+# [ 78 227]
+# [ 37 112]
+# [ 85  51]]
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/datasets/vehicle_recordings_only/ben_shemen_07_01_2020_day.txt
---val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only.txt
+--train-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_train.txt
+--val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_val.txt
 
 # training parameters
---epochs 500
---lr 1e-2
+--epochs 1000
+--lr 1e-3
 --gpu-ids 0,1
 --workers 32
 
 # checking point
---checkpoint OID_Kitti_Vehicle.pth
+--checkpoint Vehicle_Day_Only.pth
 --output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/
 
 # resume
---resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/last_trained_epoch.pth
+#--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/last_trained_epoch.pth

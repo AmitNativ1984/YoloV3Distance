@@ -7,7 +7,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="create txt file from dataset")
 
-    parser.add_argument('--images-path', type=str,
+    parser.add_argument('--images-path', type=str, nargs='+',
                         required=True,
                         help='path where images are stored. must be under ./images/ labels under ./labels/')
 
@@ -21,17 +21,18 @@ if __name__ == "__main__":
 
     args, unknow_args = parser.parse_known_args()
 
-    all_images_path = os.listdir(args.images_path)
+    for images_path in args.images_path:
+        all_images_path = os.listdir(os.path.join(images_path, 'images'))
 
-    with open(args.dest_txtfile, args.txt_file_mode) as dest_file:
-        for image_name in tqdm(all_images_path, desc='writing paths'):
-            img_path = os.path.join(args.images_path, image_name)
-            label_path = img_path.replace("/images", "/labels").replace(os.path.splitext(img_path)[-1], ".txt")
-            if os.path.isfile(label_path):
-                if os.path.getsize(label_path):
-                    dest_file.write("%s\n" % img_path)
-                else:
-                    print('empty labels')
+        with open(args.dest_txtfile, args.txt_file_mode) as dest_file:
+            for image_name in tqdm(all_images_path, desc='writing paths'):
+                img_path = os.path.join(images_path, 'images', image_name)
+                label_path = img_path.replace("/images", "/labels").replace(os.path.splitext(img_path)[-1], ".txt")
+                if os.path.isfile(label_path):
+                    if os.path.getsize(label_path):
+                        dest_file.write("%s\n" % img_path)
+                    else:
+                        print('empty labels')
 
     # txtfiles_list = [os.path.join(os.getcwd(), 'YoloV3/data/OID_train.txt'),
     #                  os.path.join(os.getcwd(), 'YoloV3/data/kzir_train.txt')]

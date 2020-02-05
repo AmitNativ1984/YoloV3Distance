@@ -23,8 +23,9 @@ def get_bbox_normalized_width_height(label_txt_file, excluded_cls=None):
         for line in f:
             vec = line.split(' ')
             cls = int(vec[0])
-            if cls in excluded_cls:
-                continue
+            if excluded_cls != None:
+                if cls in excluded_cls:
+                    continue
             w = float(vec[3])
             h = float(vec[4])
             if wh.sum() < 0:
@@ -38,7 +39,7 @@ def get_bbox_normalized_width_height(label_txt_file, excluded_cls=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='./YoloV3/data/merged_kitti_vehicle_train.txt',
+    parser.add_argument('--data', type=str, default='./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_train.txt',
                         help='text file containing all path files')
     parser.add_argument('--num-anchors', type=int, default=6,
                         help="number of classes")
@@ -51,7 +52,7 @@ if __name__ == "__main__":
                         help='width of input to cnn')
     parser.add_argument('--img-height', type=int, default=416,
                         help='width of input to cnn')
-    parser.add_argument('--output-txt-file', type=str, default='./YoloV3/data/kitti_bbox_wh.txt',
+    parser.add_argument('--output-txt-file', type=str, default='./YoloV3/data/datasets/vehicle_recordings_only/day_only_anchors.txt',
                         help='class index which will not be considered')
 
     parser.add_argument('--load-bbox', type=str, default=None,
@@ -73,11 +74,12 @@ if __name__ == "__main__":
                 H, W, _ = img.shape
 
                 wh_normalized = get_bbox_normalized_width_height(label_path, args.exclude_cls)
+                curr_bbox = wh_normalized * np.array([W, H])# / np.array([args.img_width, args.img_height]))
                 if len(wh_normalized) > 1:
                     if bbox_wh.sum() < 0:
-                        bbox_wh = wh_normalized * np.array([W, H])
+                        bbox_wh = curr_bbox
                     else:
-                        bbox_wh = np.vstack((bbox_wh, wh_normalized * np.array([W, H])))
+                        bbox_wh = np.vstack((bbox_wh, curr_bbox))
 
                 np.save(args.output_np_file, bbox_wh)
 
@@ -87,9 +89,9 @@ if __name__ == "__main__":
     mean_w,mean_h = np.mean((bbox_wh), axis=0)
     std_w, std_h = np.std((bbox_wh), axis=0)
 
-    bbox_wh = np.minimum(bbox_wh, 416 * np.ones_like(bbox_wh))
+    # bbox_wh = np.minimum(bbox_wh, 416 * np.ones_like(bbox_wh))
 
-    # bbox_wh = bbox_wh[(abs(bbox_wh[:, 0] - mean_w) < std_w) * (abs(bbox_wh[:, 1] - mean_h) < std_h), :]
+    bbox_wh = bbox_wh[(abs(bbox_wh[:, 0] - mean_w) < std_w) * (abs(bbox_wh[:, 1] - mean_h) < std_h), :]
 
     bbox_area = bbox_wh[:, 0] * bbox_wh[:, 1]
 
@@ -117,6 +119,17 @@ if __name__ == "__main__":
     plt.figure(0)
     plt.scatter(anchors[:, 0], anchors[:, 1], alpha=0.5, s=10)
 
+    anchor_min_size = np.array(np.min(np.array(anchors), axis=1))
+
+    print("achors cells on grid 1/32")
+    print(np.hstack((anchors, anchor_min_size.reshape(-1, 1) ** 2 / (32 ** 2))))
+
+    print("achors cells on grid 1/16")
+    print(np.hstack((anchors, anchor_min_size.reshape(-1, 1) ** 2 / (16 ** 2))))
+
+    print("achors cells on grid 1/8")
+    print(np.hstack((anchors, anchor_min_size.reshape(-1, 1) ** 2 / (8 ** 2))))
+
     # performing k means on ratio
     kmeans = KMeans(n_clusters=3, verbose=0).fit(bbox_ratio)
     anchors_ratio = kmeans.cluster_centers_
@@ -142,6 +155,8 @@ if __name__ == "__main__":
     plt.figure(3)
     plt.imshow(img)
     plt.show()
+
+
 
 
 
