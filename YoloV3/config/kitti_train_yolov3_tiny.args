@@ -1,20 +1,13 @@
 # model parameters:
 --model yolov3-tiny
---batch-size 64
+--batch-size 16
 --img-size 416
 --anchors [85,51],[78,227],[55,166],[37,112],[46,27],[21,59]
 
-# [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
-#[[ 21  59]
-# [ 55 166]
-# [ 46  27]
-# [ 78 227]
-# [ 37 112]
-# [ 85  51]]
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_train.txt
---val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_val.txt
+--train-data ./YoloV3/data/datasets/kitti_probot_train.txt
+--val-data ./YoloV3/data/datasets/kitti_probot_val.txt
 
 # training parameters
 --epochs 1000
@@ -23,8 +16,8 @@
 --workers 32
 
 # checking point
---checkpoint Vehicle_Day_Only.pth
---output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/
+--checkpoint Kitti_Probot.pth
+--output-path ./YoloV3/results/Kitti_Probot/
 
 # resume
-#--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/last_trained_epoch.pth
+--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/Vehicle_Day_Only.pth

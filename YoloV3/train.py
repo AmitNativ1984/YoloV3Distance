@@ -57,7 +57,7 @@ class Trainer(object):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
                                          momentum=self.args.momentum)
 
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[700, 800], gamma=0.1)
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[300, 400], gamma=0.1)
 
         self.min_loss = np.inf
 

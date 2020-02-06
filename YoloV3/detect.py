@@ -52,6 +52,7 @@ class Inference(object):
 
         total_detction_time = 0.0
         num_frames = 1.
+        out_images = []
         for b, sample in enumerate(self.data_loader):
             if num_batches:
                 if b >= num_batches:

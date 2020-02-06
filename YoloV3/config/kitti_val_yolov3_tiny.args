@@ -3,21 +3,21 @@
 --model yolov3-tiny
 --batch-size 1
 --img-size 416
---anchors [345,352],[155,344],[246,173],[116,90],[60,113],[82,227]
+--anchors [85,51],[78,227],[55,166],[37,112],[46,27],[21,59]
 # [10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]
 
 # database and classes
 --dataset-type kitti
---val-data ./YoloV3/data/OID_noGroup_train_kitti_vehicle_day_thermal.txt
+--val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_val.txt
 --num-classes 2
 
 # training parameters
 --gpu-ids 0
 
 # checking point
---checkpoint OID_Kitti_Vehicle.pth
---output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/OID_Kitti_Vehicle.pth
+--checkpoint Vehicle_Day_Only.pth
+--output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/Vehicle_Day_Only.pth
 
 # inference threshold parameters
---nms-thres 0.1  
---conf-thres 0.9
+--nms-thres 0.05  
+--conf-thres 0.95
