@@ -311,8 +311,8 @@ class YoloDetectionLayer(nn.Module):
                     t_x[b, best_n, g_i, g_j] = g_x - g_j
                     t_y[b, best_n, g_i, g_j] = g_y - g_i
 
-                    t_w[b, best_n, g_i, g_j] = torch.log(g_w / anchors[best_n, 0] + 1e-16)
-                    t_h[b, best_n, g_i, g_j] = torch.log(g_h / anchors[best_n, 1] + 1e-16)
+                    t_w[b, best_n, g_i, g_j] = torch.log(g_w / anchors[anchors_idx[best_n], 0] + 1e-16)
+                    t_h[b, best_n, g_i, g_j] = torch.log(g_h / anchors[anchors_idx[best_n], 1] + 1e-16)
 
                     # Object
                     t_conf[b, best_n, g_i, g_j] = 1
