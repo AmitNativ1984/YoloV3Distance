@@ -6,18 +6,18 @@
 
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_train.txt
---val-data ./YoloV3/data/datasets/vehicle_recordings_only/vehicle_day_only_val.txt
+--train-data ./YoloV3/data/datasets/kitti_probot_train.txt
+--val-data ./YoloV3/data/datasets/kitti_probot_val.txt
 
 # training parameters
 --epochs 1000
---lr 1e-1
+--lr 1e-3
 --gpu-ids 0,1
 --workers 32
 
 # checking point
---checkpoint Vehicle_Day_Only.pth
---output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3/
+--checkpoint Kitti_Probot.pth
+--output-path ./YoloV3/results/Kitti_Probot_yolov3/
 
 # resume
-#--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3/Vehicle_Day_Only.pth
+--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3/Vehicle_Day_Only.pth
