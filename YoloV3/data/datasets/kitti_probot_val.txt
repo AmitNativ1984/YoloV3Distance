@@ -181,7 +181,8 @@
 /home/amit/Data/Vehicle_Recordings/Ben_Shemen/14-01-2020/thermal/drive5-night/images/drive_cam3_0775.bmp
 /home/amit/Data/Vehicle_Recordings/Ben_Shemen/14-01-2020/thermal/drive5-night/images/drive_cam3_0525.bmp
 /home/amit/Data/Vehicle_Recordings/Ben_Shemen/14-01-2020/thermal/drive5-night/images/drive_cam3_0324.bmp
-/home/amit/Data/Vehicle_Recordings/Ben_Shemen/14-01-2020/thermal/drive5-night/images/drive_cam3_0046.bmp/home/amit/Data/KITTI_object_detection/kitti_single/training/images/006319.png
+/home/amit/Data/Vehicle_Recordings/Ben_Shemen/14-01-2020/thermal/drive5-night/images/drive_cam3_0046.bmp
+/home/amit/Data/KITTI_object_detection/kitti_single/training/images/006319.png
 /home/amit/Data/KITTI_object_detection/kitti_single/training/images/003150.png
 /home/amit/Data/KITTI_object_detection/kitti_single/training/images/001355.png
 /home/amit/Data/KITTI_object_detection/kitti_single/training/images/005783.png

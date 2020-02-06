@@ -17,7 +17,7 @@
 
 # checking point
 --checkpoint Kitti_Probot.pth
---output-path ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/
+--output-path ./YoloV3/results/Kitti_Probot/
 
 # resume
 --resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/Vehicle_Day_Only.pth
