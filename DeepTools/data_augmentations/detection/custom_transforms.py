@@ -58,7 +58,7 @@ def visualize_bbox(img, bbox, class_id, class_idx_to_name, color=None, thickness
     return img
 
 
-def visualize(annotations, category_id_to_name, Normalized=True, color=None):
+def visualize(annotations, category_id_to_name, Normalized=True, color=None, plot=False):
     if not color:
         color = BOX_COLOR
 
@@ -74,8 +74,9 @@ def visualize(annotations, category_id_to_name, Normalized=True, color=None):
         #     img = visualize_bbox(img, bbox, annotations['category_id'][idx], category_id_to_name, Normalized=Normalized, color=color)
 
 
-    cv2.imshow('image', img)
-    cv2.waitKey(1)
+    if plot:
+        cv2.imshow('image', img)
+        cv2.waitKey(1)
     return img
 
 
