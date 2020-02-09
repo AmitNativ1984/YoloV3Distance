@@ -6,8 +6,8 @@
 
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/datasets/kitti_probot_train.txt
---val-data ./YoloV3/data/datasets/kitti_probot_val.txt
+--train-data ./YoloV3/data/datasets/kitti_probot_train-small.txt
+--val-data ./YoloV3/data/datasets/kitti_probot_val-small.txt
 
 # training parameters
 --epochs 1000
@@ -16,7 +16,7 @@
 --workers 32
 
 # checking point
---checkpoint Kitti_Probot.pth
+--checkpoint Kitti_Probot-small.pth
 --output-path ./YoloV3/results/Kitti_Probot/
 
 # resume
