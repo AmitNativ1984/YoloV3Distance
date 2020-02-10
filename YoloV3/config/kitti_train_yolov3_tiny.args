@@ -11,7 +11,7 @@
 
 # training parameters
 --epochs 1000
---lr 1e-3
+--lr 1e-1
 --gpu-ids 0,1
 --workers 32
 
@@ -20,4 +20,4 @@
 --output-path ./YoloV3/results/Kitti_Probot/
 
 # resume
---resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/Vehicle_Day_Only.pth
+#--resume ./YoloV3/results/OID_Kitti_VehicleRecordings_yolov3_tiny/Vehicle_Day_Only.pth
