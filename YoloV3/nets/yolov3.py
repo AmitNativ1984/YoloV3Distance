@@ -64,7 +64,6 @@ class YoloV3(nn.Module):
         self.conv_Out5 = nn.Sequential(conv2D_BN_LeakyRelu(inplanes=512, outplanes=1024, kernelsize=3, stride=1, padding=1),
                                       conv2D_BN_LeakyRelu(inplanes=1024, outplanes=self.num_output_features, kernelsize=1, stride=1, padding=0))
 
-
         self.conv_Out4 = nn.Sequential(conv2D_BN_LeakyRelu(inplanes=256, outplanes=512, kernelsize=3, stride=1, padding=1),
                                         conv2D_BN_LeakyRelu(inplanes=512, outplanes=self.num_output_features, kernelsize=1, stride=1, padding=0))
 
