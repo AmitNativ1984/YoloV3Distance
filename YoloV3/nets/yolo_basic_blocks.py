@@ -60,15 +60,17 @@ class ConvSet(nn.Module):
         self.conv0 = conv2D_BN_LeakyRelu(inplanes=inplanes, outplanes=planes[0], kernelsize=1, stride=1, padding=0)
         self.conv1 = conv2D_BN_LeakyRelu(inplanes=planes[0], outplanes=planes[1], kernelsize=3, stride=1, padding=1)
         self.conv2 = conv2D_BN_LeakyRelu(inplanes=planes[1], outplanes=planes[0], kernelsize=1, stride=1, padding=0)
+        self.conv3 = conv2D_BN_LeakyRelu(inplanes=planes[0], outplanes=planes[1], kernelsize=3, stride=1, padding=1)
+        self.conv4 = conv2D_BN_LeakyRelu(inplanes=planes[1], outplanes=planes[0], kernelsize=1, stride=1, padding=0)
 
     def forward(self, x):
         x = self.conv0(x)
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.conv1(x)
-        out = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
 
-        return out
+        return x
 
 class YoloDetectionLayer(nn.Module):
     """ YOLO loss layer. will be used during trainning """
