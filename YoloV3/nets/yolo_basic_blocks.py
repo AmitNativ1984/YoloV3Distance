@@ -68,9 +68,9 @@ class ConvSet(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        out = self.conv4(x)
+        x = self.conv4(x)
 
-        return out
+        return x
 
 class YoloDetectionLayer(nn.Module):
     """ YOLO loss layer. will be used during trainning """
