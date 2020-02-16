@@ -48,7 +48,7 @@ class Trainer(object):
             raise("unknown dataset type: {}".format(self.args.dataset_type))
 
         self.train_loader = torch.utils.data.DataLoader(trainset, **kwargs, shuffle=True)
-        self.val_loader = torch.utils.data.DataLoader(valset, **kwargs, shuffle=False)
+        self.val_loader = torch.utils.data.DataLoader(valset, **kwargs, shuffle=True)
 
         # defining yolo detection layer:
         self.yolo_loss = YoloDetectionLayer(self.args, cls_count=trainset.class_count())
@@ -57,7 +57,17 @@ class Trainer(object):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
                                          momentum=self.args.momentum)
 
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.8*self.args.epochs), int(0.9*self.args.epochs)], gamma=0.1)
+        # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.8*self.args.epochs), int(0.9*self.args.epochs)], gamma=0.1)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
+                                                                    mode='min',
+                                                                    factor=0.1,
+                                                                    patience=10,
+                                                                    verbose=True,
+                                                                    threshold=0.01,
+                                                                    threshold_mode='rel',
+                                                                    cooldown=0,
+                                                                    min_lr=1e-4,
+                                                                    eps=1e-08)
 
         self.min_loss = np.inf
 
@@ -102,11 +112,11 @@ class Trainer(object):
                 ClsLoss += loss_out[3].item()
 
             curr_time = time.time()
-            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [sec]' % (LossTotal/batch,
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (LossTotal/batch,
                                                                                                    BboxLoss/batch,
                                                                                                    ObjectnessLoss/batch,
                                                                                                    ClsLoss/batch,
-                                                                                                   curr_time - start_time)
+                                                                                                   (curr_time - start_time)/60)
             pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
             # backpropagation
@@ -119,7 +129,7 @@ class Trainer(object):
         self.writer.add_scalar('train/objectness_loss', ObjectnessLoss/batch, epoch)
         self.writer.add_scalar('train/cls_loss', ClsLoss/batch, epoch)
 
-        self.scheduler.step(epoch)
+        self.scheduler.step(LossTotal/batch)
 
     def validate(self, epoch):
 
@@ -156,11 +166,11 @@ class Trainer(object):
                 cls_loss += loss_out0[3] + loss_out1[3]
 
                 curr_time = time.time()
-                pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [sec]' % (loss_total.item()/batch,
+                pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (loss_total.item()/batch,
                                                                                                             bbox_loss.item()/batch,
                                                                                                             objectness_loss.item()/batch,
                                                                                                             cls_loss.item()/batch,
-                                                                                                            curr_time - start_time)
+                                                                                                            (curr_time - start_time)/60)
                 pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
         epoch_total_loss = loss_total.item() / batch
