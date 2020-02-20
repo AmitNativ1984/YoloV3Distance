@@ -19,5 +19,7 @@
 --checkpoint Kitti_Probot.pth
 --output-path ./YoloV3/results/Kitti_Probot_yolov3/
 
+--weights ./YoloV3/results/Kitti_Probot_yolov3/Kitti_Probot.pth
+
 # resume
---resume ./YoloV3/results/Kitti_Probot_yolov3/Kitti_Probot.pth
+#--resume

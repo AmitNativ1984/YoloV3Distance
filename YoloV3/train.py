@@ -173,12 +173,12 @@ class Trainer(object):
 
                     curr_time = time.time()
 
-            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] lr = %.6f time=%.2f [min]' % (
-                                                                                                                    LossTotal / batch,
-                                                                                                                    BboxLoss / batch,
-                                                                                                                    ObjectnessLoss / batch,
-                                                                                                                    ClsLoss / batch,
-                                                                                                                (curr_time - start_time) / 60)
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (
+                                                                                                        LossTotal / batch,
+                                                                                                        BboxLoss / batch,
+                                                                                                        ObjectnessLoss / batch,
+                                                                                                        ClsLoss / batch,
+                                                                                                        (curr_time - start_time) / 60)
             pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
         if isinstance(model, torch.nn.DataParallel):
@@ -274,8 +274,8 @@ if __name__ == "__main__":
                         default='kzir',
                         help='dataset type. one of kitti, kzir')
     # checking point
-    parser.add_argument('--resume', type=str, default=None,
-                        help='put the path to resuming file if needed')
+    parser.add_argument('--resume', action='store_true',
+                        help='is given, will resu,e training from loaded checkpoint including learning rate')
     parser.add_argument('--checkpoint', type=str, default='model_best.pth',
                         help='set the checkpoint name')
     parser.add_argument('--output-path', type=str, default=os.getcwd() + "/YoloV3/results",
@@ -330,10 +330,10 @@ if __name__ == "__main__":
         raise ("currently supporting only yolov3_or yolov3 tiny")
 
 
-    if args.resume:
+    if args.weights != '':
         # load trained model
-        model.load_state_dict(torch.load(args.resume)["model_state_dict"])
-        logging.info('loaded model from: {}'.format(args.resume))
+        model.load_state_dict(torch.load(args.weights)["model_state_dict"])
+        logging.info('loaded model from: {}'.format(args.weights))
 
 
     # Multi GPU if possible:
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     trainer = Trainer(args, model)
 
     if args.resume:
-        trainer.optimizer.load_state_dict(torch.load(args.resume)["optimizer"])
+        trainer.optimizer.load_state_dict(torch.load(args.weights)["optimizer"])
 
     # BEGIN TRAINING
     # --------------
