@@ -61,12 +61,12 @@ class Trainer(object):
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
                                                                     mode='min',
                                                                     factor=0.1,
-                                                                    patience=10,
+                                                                    patience=20,
                                                                     verbose=True,
-                                                                    threshold=0.01,
-                                                                    threshold_mode='rel',
+                                                                    threshold=0.05,
+                                                                    threshold_mode='abs',
                                                                     cooldown=0,
-                                                                    min_lr=1e-4,
+                                                                    min_lr=1e-8,
                                                                     eps=1e-08)
 
         self.min_loss = np.inf
@@ -112,10 +112,11 @@ class Trainer(object):
                 ClsLoss += loss_out[3].item()
 
             curr_time = time.time()
-            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (LossTotal/batch,
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] lr = %.6f time=%.2f [min]' % (LossTotal/batch,
                                                                                                    BboxLoss/batch,
                                                                                                    ObjectnessLoss/batch,
                                                                                                    ClsLoss/batch,
+                                                                                                   self.optimizer.param_groups[0]['lr'],
                                                                                                    (curr_time - start_time)/60)
             pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
@@ -138,10 +139,10 @@ class Trainer(object):
 
         model_was_saved = False
 
-        loss_total = 0.
-        bbox_loss = 0.
-        objectness_loss = 0.
-        cls_loss = 0.
+        LossTotal = 0.
+        BboxLoss = 0.
+        ObjectnessLoss = 0.
+        ClsLoss = 0.
 
         barformat = "{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}"
         pbar = tqdm(self.val_loader, ncols=150, bar_format=barformat)
@@ -151,34 +152,54 @@ class Trainer(object):
             batch = b + 1
             image, bboxes = sample["image"], sample["bboxes"]
             if self.args.cuda:
-                image, bboxes = image.cuda(), bboxes.cuda()
+                image, bboxes = image.to(device), bboxes.to(device)
 
             with torch.no_grad():
                 preds = model(image)
 
-                # calculate loss for every resolution
-                loss_out0 = self.yolo_loss(preds[0], bboxes)
-                loss_out1 = self.yolo_loss(preds[1], bboxes)
+                # collecting loss from each layer:
+                loss_total = torch.zeros([1], requires_grad=True).to(image.device)
+                for pred in preds:
+                    # calculate loss for every resolution
+                    loss_out = self.yolo_loss(pred, bboxes)
 
-                loss_total += loss_out0[0] + loss_out1[0].item()
-                bbox_loss += loss_out0[1] + loss_out1[1].item()
-                objectness_loss += loss_out0[2] + loss_out1[2]
-                cls_loss += loss_out0[3] + loss_out1[3]
+                    loss_total += loss_out[0]
 
-                curr_time = time.time()
-                pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (loss_total.item()/batch,
-                                                                                                            bbox_loss.item()/batch,
-                                                                                                            objectness_loss.item()/batch,
-                                                                                                            cls_loss.item()/batch,
-                                                                                                            (curr_time - start_time)/60)
-                pbar.set_postfix_str(s=pbar_postfix, refresh=True)
+                    # accumulating loss for logging message:
+                    LossTotal += loss_out[0].item()
+                    BboxLoss += loss_out[1].item()
+                    ObjectnessLoss += loss_out[2].item()
+                    ClsLoss += loss_out[3].item()
 
-        epoch_total_loss = loss_total.item() / batch
+                    curr_time = time.time()
+
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] lr = %.6f time=%.2f [min]' % (
+                                                                                                                    LossTotal / batch,
+                                                                                                                    BboxLoss / batch,
+                                                                                                                    ObjectnessLoss / batch,
+                                                                                                                    ClsLoss / batch,
+                                                                                                                (curr_time - start_time) / 60)
+            pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
         if isinstance(model, torch.nn.DataParallel):
             model_state_dict = self.model.module.state_dict()
         else:
             model_state_dict = self.model.state_dict()
+
+        # saving best results.
+        if LossTotal < self.min_loss:
+            logging.info('validation loss imporoved from {} to {}'.format(self.min_loss, LossTotal))
+            self.min_loss = LossTotal
+
+            model_outpath = os.path.join(self.args.output_path, self.args.checkpoint)
+            torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': model_state_dict,
+                        'optimizer': self.optimizer.state_dict(),
+                        'best_pred': self.min_loss
+                        }, model_outpath)
+
+            logging.info('Model saved to: {}'.format(model_outpath))
 
         # saving model to save file on every epoch
         model_outpath = os.path.join(self.args.output_path, 'last_trained_epoch.pth')
@@ -189,25 +210,11 @@ class Trainer(object):
             'best_pred': self.min_loss
         }, model_outpath)
 
-        # saving best results.
-        if epoch_total_loss < self.min_loss:
-            self.min_loss = epoch_total_loss
-
-            model_outpath = os.path.join(self.args.output_path, self.args.checkpoint)
-            torch.save({
-                        'epoch': epoch,
-                        'model_state_dict': model_state_dict,
-                        'optimizer': self.optimizer.state_dict(),
-                        'best_pred': self.min_loss
-                        }, model_outpath)
-
-            logging.info('validation loss imporoved! Model saved to: {}'.format(model_outpath))
-
         # writing epoch summaries to tensorboard:
-        self.writer.add_scalar('val/total_loss_epoch', loss_total.item()/batch, epoch)
-        self.writer.add_scalar('val/BboxLoss', bbox_loss.item()/batch, epoch)
-        self.writer.add_scalar('val/objectness_loss', objectness_loss.item()/batch, epoch)
-        self.writer.add_scalar('val/cls_loss', cls_loss.item()/batch, epoch)
+        self.writer.add_scalar('val/total_loss_epoch', LossTotal / batch, epoch)
+        self.writer.add_scalar('val/BboxLoss', BboxLoss / batch, epoch)
+        self.writer.add_scalar('val/objectness_loss', ObjectnessLoss / batch, epoch)
+        self.writer.add_scalar('val/cls_loss', ClsLoss / batch, epoch)
 
         # running inference and saving to tensorboard
         infer_args = self.args
@@ -320,7 +327,7 @@ if __name__ == "__main__":
     elif args.model == 'yolov3':
         model = YoloV3(args)
     else:
-        raise ("currently supporting only yolov3_tiny")
+        raise ("currently supporting only yolov3_or yolov3 tiny")
 
 
     if args.resume:

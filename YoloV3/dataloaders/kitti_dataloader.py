@@ -104,6 +104,14 @@ class KittiDataset(Dataset):
         img = sample["image"]
         bboxes = sample["bboxes"]
 
+        imgH = img.shape[0]
+        imgW = img.shape[1]
+
+        if imgW / imgH < 2.5:
+            scale_factor = min(self.args.img_size[0]/imgH, self.args.img_size[1]/imgW)
+        else:
+            scale_factor = 1.0
+
         if bboxes.size == 0:
             bboxes = np.array([[0.1, 0.1, 0.1, 0.1, 0.0]])  # this is just a dummy - all values must be inside (0,1)
 
@@ -113,6 +121,8 @@ class KittiDataset(Dataset):
 
         transforms = ([OneOf([Blur(p=0.5, blur_limit=(3, 10)),
                               MotionBlur(p=0.5, blur_limit=(3, 20))], p=0.2),
+                       Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
+                              p=1.0),
                       # padding image in case is too small
                       PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
                                   border_mode=cv2.BORDER_REPLICATE,
@@ -143,15 +153,32 @@ class KittiDataset(Dataset):
         img = sample["image"]
         bboxes = sample["bboxes"]
 
+        imgH = img.shape[0]
+        imgW = img.shape[1]
+
+        if imgW / imgH < 2.5:
+            scale_factor = min(self.args.img_size[0] / imgH, self.args.img_size[1] / imgW)
+        else:
+            scale_factor = 1.0
+
+        random_scale = np.random.randint(8, 11) / 10
+
         if bboxes.size == 0:
             bboxes = np.array([[0.1, 0.1, 0.1, 0.1, 0.0]])  # this is just a dummy - all values must be inside (0,1)
 
         annotations = {'image': img, 'bboxes': bboxes}
 
-        transforms = ([PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
-                                   border_mode=cv2.BORDER_REPLICATE, p=1.0),
+        transforms = ([Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
+                              p=1.0),
+                       PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
+                                   border_mode=cv2.BORDER_REPLICATE,
+                                   p=1.0),
                        # changing image size - mainting aspect ratio for later resize
-                       RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=1.0),
+                       OneOf([RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=0.5),
+                              RandomCrop(height=int(random_scale * self.args.img_size[0]),
+                                         width=int(random_scale * self.args.img_size[1]), p=0.5)], p=1.0),
+                       # making sure resize fits with yolo input size
+                       Resize(height=self.args.img_size[0], width=self.args.img_size[1], p=1.0),
                        Normalize(p=1.0)])
 
         preform_augmentation = Compose(transforms, bbox_params=BboxParams(format='yolo',

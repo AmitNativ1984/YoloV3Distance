@@ -6,12 +6,12 @@
 
 # database and classes
 --dataset-type kitti
---train-data ./YoloV3/data/datasets/OID_Person_allCars_Kitti_Probot_train.txt
+--train-data ./YoloV3/data/datasets/OID_Person_allCars_Kitti_Probot_train_New.txt
 --val-data ./YoloV3/data/datasets/OID_Person_allCars_Kitti_Probot_val.txt
 
 # training parameters
 --epochs 1000
---lr 1e-2
+--lr 1e-3
 --gpu-ids 0,1
 --workers 32
 
@@ -20,4 +20,4 @@
 --output-path ./YoloV3/results/Kitti_Probot_yolov3/
 
 # resume
---resume ./YoloV3/results/Kitti_Probot_yolov3/last_trained_epoch.pth
+--resume ./YoloV3/results/Kitti_Probot_yolov3/Kitti_Probot.pth

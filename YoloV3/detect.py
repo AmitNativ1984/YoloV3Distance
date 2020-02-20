@@ -6,6 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 from YoloV3.dataloaders.kzir_dataloader import KzirDataset
 from YoloV3.dataloaders.kitti_dataloader import KittiDataset
 from YoloV3.nets.yolov3_tiny import YoloV3_tiny
+from YoloV3.nets.yolov3 import YoloV3
 from YoloV3.nets.yolo_basic_blocks import YoloDetectionLayer
 import torchvision
 from torchvision.ops.boxes import nms, box_iou
@@ -40,9 +41,8 @@ class Inference(object):
         else:
             raise("unknown dataset type: {}".format(self.args.dataset_type))
 
-        self.data_loader = torch.utils.data.DataLoader(dataset, **kwargs, shuffle=False)
+        self.data_loader = torch.utils.data.DataLoader(dataset, **kwargs, shuffle=True)
 
-        self.data_loader = torch.utils.data.DataLoader(dataset, **kwargs, shuffle=False)
         self.label_decoder = {v: k for k, v in dataset.label_decoding().items()}
 
     def infer(self, num_batches=None):
@@ -71,10 +71,14 @@ class Inference(object):
             with torch.no_grad():
                 preds = model(image)
 
-                # calculate predictions output for every layer
-                out_res0 = self.yolo_loss(preds[0])
-                out_res1 = self.yolo_loss(preds[1])
-                output = torch.cat((out_res0, out_res1), dim=1)
+                for res_idx, pred in enumerate(preds):
+                    # calculate loss for every resolution
+                    curr_res_output = self.yolo_loss(pred)
+                    if res_idx == 0:
+                        output = curr_res_output
+                    else:
+                        output = torch.cat((output, curr_res_output), dim=1)
+
                 t_preds = time.time()
 
                 # discard all bboxes with conf < threshold:
@@ -169,7 +173,7 @@ if __name__ == "__main__":
                         required=True,
                         help='path to parent database root. its childern is images/ and /labels')
     parser.add_argument('--model', type=str, default='yolov3-tiny',
-                        choices=['yolov3-tiny'],
+                        choices=['yolov3-tiny', 'yolov3'],
                         help='yolo models. can be one of: yolov3-tiny, yolov3')
     parser.add_argument('--batch-size', type=int, default=4,
                         help='train batch size')
@@ -230,12 +234,13 @@ if __name__ == "__main__":
     if np.size(args.img_size) == 1:
         args.img_size = [args.img_size, args.img_size]
 
-    # selecting model from user inputs
-    if args.model == 'yolov3-tiny':
-        model = YoloV3_tiny(args)
-
-    else:
-        raise ("currently supporting only yolov3_tiny")
+        # selecting model from user inputs
+        if args.model == 'yolov3-tiny':
+            model = YoloV3_tiny(args)
+        elif args.model == 'yolov3':
+            model = YoloV3(args)
+        else:
+            raise ("currently supporting only yolov3_or yolov3 tiny")
 
     args.cuda = torch.cuda.is_available()
     if args.cuda:
