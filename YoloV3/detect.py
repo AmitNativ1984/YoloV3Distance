@@ -3,8 +3,7 @@ import argparse
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from YoloV3.dataloaders.kzir_dataloader import KzirDataset
-from YoloV3.dataloaders.kitti_dataloader import KittiDataset
+from YoloV3.dataloaders.distanceEstimation_dataloader import DistanceEstimationDataset
 from YoloV3.nets.yolov3_tiny import YoloV3_tiny
 from YoloV3.nets.yolov3 import YoloV3
 from YoloV3.nets.yolo_basic_blocks import YoloDetectionLayer
@@ -33,11 +32,9 @@ class Inference(object):
         # Define dataloader
         kwargs = {'batch_size': 1, 'num_workers': args.workers, 'pin_memory': True}
 
-        if self.args.dataset_type == 'kzir':
-            dataset = KzirDataset(args, split='val')
+        if self.args.dataset_type == 'distance':
+            dataset = DistanceEstimationDataset(args, split='val')
 
-        elif self.args.dataset_type == 'kitti':
-            dataset = KittiDataset(args, split='val')
         else:
             raise("unknown dataset type: {}".format(self.args.dataset_type))
 
@@ -51,7 +48,7 @@ class Inference(object):
         model.eval()
 
         total_detction_time = 0.0
-        num_frames = 1.
+        num_frames = 0.
         out_images = []
         for b, sample in enumerate(self.data_loader):
             if num_batches:
@@ -70,6 +67,7 @@ class Inference(object):
             t0 = time.time()
             with torch.no_grad():
                 preds = model(image)
+                num_frames += 1
 
                 for res_idx, pred in enumerate(preds):
                     # calculate loss for every resolution
@@ -87,7 +85,7 @@ class Inference(object):
                     detections = confident_bboxes # empty tensor
 
                 else:
-                    predicted_cls = torch.argmax(confident_bboxes[..., 5:], dim=-1).cpu().numpy()
+                    predicted_cls = torch.argmax(confident_bboxes[..., 6:], dim=-1).cpu().numpy()
 
                     # finding all possible classes in image
                     all_cls_in_image = np.unique(predicted_cls)
@@ -113,6 +111,7 @@ class Inference(object):
                                                  iou_threshold=self.args.nms_thres)
 
                         curr_bboxes = confident_bboxes[curr_detection_idx, :4]
+                        curr_dist = confident_bboxes[curr_detection_idx, 5]
                         curr_cls = torch.Tensor(curr_detection_idx.shape[0], 1).cuda().fill_(curr_cls)
 
                         detections.append(torch.cat((curr_bboxes, curr_cls), dim=1))
@@ -158,7 +157,7 @@ class Inference(object):
                                                                                                      (t_nms - t_preds) * 1e3,
                                                                                                      (t_visualize - t_nms) * 1e3))
 
-                num_frames += 1
+
                 total_detction_time += (t_preds - t0)*1e3 + (t_nms - t_preds) * 1e3
         cv2.destroyAllWindows()
 

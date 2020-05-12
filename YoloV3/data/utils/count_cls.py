@@ -24,7 +24,7 @@ def count_cls(source_path, cls_type_dict):
     time.sleep(0.1)
     cls_dict = {
         "Person": cls_count[0],
-        "Car": cls_count[1]
+        # "Car": cls_count[1]
     }
 
     return cls_dict

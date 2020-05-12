@@ -82,16 +82,17 @@ class YoloDetectionLayer(nn.Module):
         self.anchors = self.args.anchors
         self.num_anchors = self.args.num_anchors_per_resolution
         self.num_classes = self.args.num_classes
-        self.bbox_attrib = 5 + self.args.num_classes
+        self.bbox_attrib = 6 + self.args.num_classes
         self.img_size = self.args.img_size
 
         self.cls_count = cls_count
 
         # thresholds
         self.iou_threshold = 0.5
-        self.lambda_coord = 5
+        self.lambda_coord = 2
+        self.lambda_dist = 5
         self.lambda_obj = 1.0
-        self.lambda_noobj = 0.5
+        self.lambda_noobj = 1.0
         self.lambda_cls = 1.0
 
         self.mse_loss = nn.MSELoss()
@@ -111,6 +112,7 @@ class YoloDetectionLayer(nn.Module):
 
         scale_w = self.img_size[0] / in_w
         scale_h = self.img_size[1] / in_h
+
         #anchor size on output plane - downsampled the same as original image
         scaled_anchors = np.array([(a_w / scale_w, a_h / scale_h) for a_w, a_h in self.anchors])
 
@@ -131,15 +133,16 @@ class YoloDetectionLayer(nn.Module):
         t_w = preds[..., 2]                         # Width
         t_h = preds[..., 3]                         # Height
         pred_conf = torch.sigmoid(preds[..., 4])    # Objectness score
-        pred_cls = torch.sigmoid(preds[..., 5:])    # Class predictions
+        pred_dist = preds[..., 5]
+        pred_cls = torch.sigmoid(preds[..., 6:])    # Class predictions
 
         if gt_targets is not None:
             """ TRAINING """
 
             # build targets
-            mask, noobj_mask, x0, y0, w, h, gt_conf, gt_cls = self.get_target(gt_targets, scaled_anchors, anchors_idx,
-                                                                              in_w, in_h,
-                                                                              self.iou_threshold)
+            mask, noobj_mask, x0, y0, w, h, gt_conf, gt_cls, d = self.get_target(gt_targets, scaled_anchors, anchors_idx,
+                                                                                      in_w, in_h,
+                                                                                      self.iou_threshold)
 
             # calculating loss
             # bbox coordinate regression:
@@ -147,6 +150,7 @@ class YoloDetectionLayer(nn.Module):
             loss_y = self.mse_loss(t_y[mask > 0], y0[mask > 0])
             loss_w = self.mse_loss(t_w[mask > 0], w[mask > 0])
             loss_h = self.mse_loss(t_h[mask > 0], h[mask > 0])
+            loss_d = self.mse_loss(pred_dist[mask > 0], d[mask > 0])
 
             n_obj = float((mask == 1).sum())
             n_no_obj = float((noobj_mask == 1).sum())
@@ -174,7 +178,8 @@ class YoloDetectionLayer(nn.Module):
             bbox_loss = self.lambda_coord * (loss_xy + loss_wh)
             objectness_loss = self.lambda_obj * loss_obj + self.lambda_noobj * loss_noobj
             cls_loss = self.lambda_cls * loss_cls
-
+            dist_loss = self.lambda_dist * loss_d
+            #TODO: add distance loss
             loss_total = bbox_loss + objectness_loss + cls_loss
 
             # this is for safety... just incase no gt targets are provided checking if loss is not nan due to no objects
@@ -241,9 +246,9 @@ class YoloDetectionLayer(nn.Module):
             pred_bboxes = pred_bboxes.view(batch_size, -1, 4)
             pred_conf = pred_conf.view(batch_size, -1, 1)
             pred_cls = pred_cls.view(batch_size, -1, self.num_classes)
+            pred_dist =pred_dist.view(batch_size, -1, 1)
 
-
-            pred_out = torch.cat((pred_bboxes, pred_conf, pred_cls), -1)
+            pred_out = torch.cat((pred_bboxes, pred_conf, pred_dist, pred_cls), -1)
 
             return pred_out
 
@@ -263,6 +268,7 @@ class YoloDetectionLayer(nn.Module):
         t_h = torch.zeros_like(mask)
         t_conf = torch.zeros_like(mask, device=gt_targets_device)
         t_cls = torch.zeros(batch_size, self.num_anchors, in_h, in_w, self.num_classes, requires_grad=False, device=gt_targets_device)
+        t_dist = torch.zeros_like(mask, device=gt_targets_device)
 
         anchors_idx = np.array(anchors_idx)
         # filling above tensors with gt_targets data
@@ -322,7 +328,10 @@ class YoloDetectionLayer(nn.Module):
                     # Class one hot encoding
                     t_cls[b, best_n, g_i, g_j, int(gt_targets[b, t, -1])] = 1
 
-        return mask, noobj_mask, t_x, t_y, t_w, t_h, t_conf, t_cls
+                    # Distance
+                    t_dist[b, best_n, g_i, g_j] = gt_targets[b, t, -2]
+
+        return mask, noobj_mask, t_x, t_y, t_w, t_h, t_conf, t_cls, t_dist
 
 if __name__ == "__main__":
     """ test YOLOLoss """

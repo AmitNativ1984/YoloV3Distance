@@ -4,8 +4,7 @@ import argparse
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from YoloV3.dataloaders.kzir_dataloader import KzirDataset
-from YoloV3.dataloaders.kitti_dataloader import KittiDataset
+from YoloV3.dataloaders.distanceEstimation_dataloader import DistanceEstimationDataset
 from YoloV3.nets.yolov3_tiny import YoloV3_tiny
 from YoloV3.nets.yolov3 import YoloV3
 from YoloV3.nets.yolo_basic_blocks import YoloDetectionLayer
@@ -37,13 +36,10 @@ class Trainer(object):
         # Define dataloader
         kwargs = {'batch_size': args.batch_size, 'num_workers': args.workers, 'pin_memory': True}
 
-        if self.args.dataset_type == 'kzir':
-            trainset = KzirDataset(args, split='train')
-            valset = KzirDataset(args, split='val')
+        if self.args.dataset_type == 'distance':
+            trainset = DistanceEstimationDataset(args, split='train')
+            valset = DistanceEstimationDataset(args, split='val')
 
-        elif self.args.dataset_type == 'kitti':
-            trainset = KittiDataset(args, split='train')
-            valset = KittiDataset(args, split='val')
         else:
             raise("unknown dataset type: {}".format(self.args.dataset_type))
 
@@ -57,17 +53,17 @@ class Trainer(object):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
                                          momentum=self.args.momentum)
 
-        # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.8*self.args.epochs), int(0.9*self.args.epochs)], gamma=0.1)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
-                                                                    mode='min',
-                                                                    factor=0.1,
-                                                                    patience=20,
-                                                                    verbose=True,
-                                                                    threshold=0.05,
-                                                                    threshold_mode='abs',
-                                                                    cooldown=0,
-                                                                    min_lr=1e-8,
-                                                                    eps=1e-08)
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.9*self.args.epochs), int(0.95*self.args.epochs)], gamma=0.1)
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
+        #                                                             mode='min',
+        #                                                             factor=0.1,
+        #                                                             patience=20,
+        #                                                             verbose=True,
+        #                                                             threshold=0.05,
+        #                                                             threshold_mode='abs',
+        #                                                             cooldown=0,
+        #                                                             min_lr=1e-8,
+        #                                                             eps=1e-08)
 
         self.min_loss = np.inf
 
@@ -130,7 +126,8 @@ class Trainer(object):
         self.writer.add_scalar('train/objectness_loss', ObjectnessLoss/batch, epoch)
         self.writer.add_scalar('train/cls_loss', ClsLoss/batch, epoch)
 
-        self.scheduler.step(LossTotal/batch)
+        #self.scheduler.step(LossTotal/batch)
+        self.scheduler.step()
 
     def validate(self, epoch):
 
@@ -187,9 +184,9 @@ class Trainer(object):
             model_state_dict = self.model.state_dict()
 
         # saving best results.
-        if LossTotal < self.min_loss:
-            logging.info('validation loss imporoved from {} to {}'.format(self.min_loss, LossTotal))
-            self.min_loss = LossTotal
+        if LossTotal / batch < self.min_loss:
+            logging.info('validation loss imporoved from {} to {}'.format(self.min_loss, LossTotal/batch))
+            self.min_loss = LossTotal/batch
 
             model_outpath = os.path.join(self.args.output_path, self.args.checkpoint)
             torch.save({
@@ -252,7 +249,7 @@ if __name__ == "__main__":
                         help='momentum')
     parser.add_argument('--weight-decay', type=float, default=5e-4,
                         metavar='M', help='w-decay (default: 5e-4)')
-    parser.add_argument('--weights', type=str, default=None,
+    parser.add_argument('--weights', type=str, default='',
                         help='path to pretrained weights')
     parser.add_argument('--gpu-ids', type=str, default='1, 0',
                         help='use which gpu to train, must be a \
@@ -271,8 +268,8 @@ if __name__ == "__main__":
                         help='lists of anchors. each anchor are given as lists separated by coma: [x1,y1],[x2,y2],..')
     # dataset type
     parser.add_argument('--dataset-type', type=str,
-                        default='kzir',
-                        help='dataset type. one of kitti, kzir')
+                        default='distance',
+                        help='dataset type')
     # checking point
     parser.add_argument('--resume', action='store_true',
                         help='is given, will resu,e training from loaded checkpoint including learning rate')
@@ -286,13 +283,15 @@ if __name__ == "__main__":
                         help='non max suppression bbox iou threshold')
     parser.add_argument('--conf-thres', type=float, default=0.5,
                         help='object prediction confidence threshold')
+    parser.add_argument('--dist-norm', type=float, default=30.0,
+                        help='normalize distance by this size')
 
     args, unknow_args = parser.parse_known_args()
 
     logging.info('input parameters: {}'.format(args))
 
     # getting number of classes from dataloader
-    args.num_classes = len(KzirDataset(args).label_decoding().keys())
+    args.num_classes = len(DistanceEstimationDataset(args).label_decoding().keys())
 
     # parsing anchors:
     anchors = args.anchors.replace('[',',').replace(']',',').split(',')

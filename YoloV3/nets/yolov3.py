@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torchsummary import summary
 from YoloV3.nets.yolo_basic_blocks import conv2D_BN_LeakyRelu, MaxPoolPaddedStride1, ResBlock, ConvSet
-from DeepTools.Onnx2TRT.onnx_ternsorRT import pytorch2onnx
+# from DeepTools.Onnx2TRT.onnx_ternsorRT import pytorch2onnx
 from collections import OrderedDict
 
 class darknet53(nn.Module):
@@ -50,7 +50,7 @@ class YoloV3(nn.Module):
 
         self.num_classes = args.num_classes
         self.num_anchors = args.num_anchors_per_resolution
-        self.num_output_features = self.num_anchors * (4 + 1 + self.num_classes)
+        self.num_output_features = self.num_anchors * (4 + 2 + self.num_classes)
 
         self.darknet53 = darknet53(args)
 

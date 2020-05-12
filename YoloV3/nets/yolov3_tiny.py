@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torchsummary import summary
 from YoloV3.nets.yolo_basic_blocks import conv2D_BN_LeakyRelu, MaxPoolPaddedStride1
-from DeepTools.Onnx2TRT.onnx_ternsorRT import pytorch2onnx
+# from DeepTools.Onnx2TRT.onnx_ternsorRT import pytorch2onnx
 
 class YoloV3_tiny(nn.Module):
     def __init__(self, args):

@@ -27,7 +27,7 @@ if __name__ == "__main__":
         with open(args.dest_txtfile, args.txt_file_mode) as dest_file:
             for image_name in tqdm(all_images_path, desc='writing paths'):
                 img_path = os.path.join(images_path, 'images', image_name)
-                label_path = img_path.replace("/images", "/labels").replace(os.path.splitext(img_path)[-1], ".txt")
+                label_path = img_path.replace("images", "labels").replace(os.path.splitext(img_path)[-1], ".txt")
                 if os.path.isfile(label_path):
                     if os.path.getsize(label_path):
                         dest_file.write("%s\n" % img_path)
