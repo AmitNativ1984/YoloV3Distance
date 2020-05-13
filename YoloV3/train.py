@@ -50,8 +50,10 @@ class Trainer(object):
         self.yolo_loss = YoloDetectionLayer(self.args, cls_count=trainset.class_count())
 
         # Define optimizer
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
-                                         momentum=self.args.momentum)
+        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay,
+        #                                  momentum=self.args.momentum)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.9*self.args.epochs), int(0.95*self.args.epochs)], gamma=0.1)
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
