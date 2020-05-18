@@ -55,7 +55,7 @@ class Trainer(object):
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[int(0.9*self.args.epochs), int(0.95*self.args.epochs)], gamma=0.1)
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[500, 900], gamma=0.1)
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,
         #                                                             mode='min',
         #                                                             factor=0.1,
@@ -79,6 +79,7 @@ class Trainer(object):
         BboxLoss = 0.
         ObjectnessLoss = 0.
         ClsLoss = 0.
+        DistLoss = 0.
 
         barformat = "{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}"
         pbar = tqdm(self.train_loader, ncols=150, bar_format=barformat)
@@ -108,14 +109,17 @@ class Trainer(object):
                 BboxLoss += loss_out[1].item()
                 ObjectnessLoss += loss_out[2].item()
                 ClsLoss += loss_out[3].item()
+                DistLoss += loss_out[4].item()
+
 
             curr_time = time.time()
-            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] lr = %.6f time=%.2f [min]' % (LossTotal/batch,
-                                                                                                   BboxLoss/batch,
-                                                                                                   ObjectnessLoss/batch,
-                                                                                                   ClsLoss/batch,
-                                                                                                   self.optimizer.param_groups[0]['lr'],
-                                                                                                   (curr_time - start_time)/60)
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f | dist=%.5f] lr = %.6f time=%.2f [min]'%(LossTotal/batch,
+                                                                                                                            BboxLoss/batch,
+                                                                                                                            ObjectnessLoss/batch,
+                                                                                                                            ClsLoss/batch,
+                                                                                                                            DistLoss/batch,
+                                                                                                                            self.optimizer.param_groups[0]['lr'],
+                                                                                                                            (curr_time - start_time)/60)
             pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
             # backpropagation
@@ -127,6 +131,7 @@ class Trainer(object):
         self.writer.add_scalar('train/BboxLoss', BboxLoss/batch, epoch)
         self.writer.add_scalar('train/objectness_loss', ObjectnessLoss/batch, epoch)
         self.writer.add_scalar('train/cls_loss', ClsLoss/batch, epoch)
+        self.writer.add_scalar('train/dist_loss', DistLoss / batch, epoch)
 
         #self.scheduler.step(LossTotal/batch)
         self.scheduler.step()
@@ -142,6 +147,7 @@ class Trainer(object):
         BboxLoss = 0.
         ObjectnessLoss = 0.
         ClsLoss = 0.
+        DistLoss = 0.
 
         barformat = "{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}"
         pbar = tqdm(self.val_loader, ncols=150, bar_format=barformat)
@@ -169,14 +175,15 @@ class Trainer(object):
                     BboxLoss += loss_out[1].item()
                     ObjectnessLoss += loss_out[2].item()
                     ClsLoss += loss_out[3].item()
-
+                    DistLoss += loss_out[4].item()
                     curr_time = time.time()
 
-            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f] time=%.2f [min]' % (
+            pbar_postfix = '[loss: total=%.5f| bbox=%.5f| objctness=%.5f| cls=%.5f| dist=%.5f] time=%.2f [min]' % (
                                                                                                         LossTotal / batch,
                                                                                                         BboxLoss / batch,
                                                                                                         ObjectnessLoss / batch,
                                                                                                         ClsLoss / batch,
+                                                                                                        DistLoss/ batch,
                                                                                                         (curr_time - start_time) / 60)
             pbar.set_postfix_str(s=pbar_postfix, refresh=True)
 
@@ -214,6 +221,7 @@ class Trainer(object):
         self.writer.add_scalar('val/BboxLoss', BboxLoss / batch, epoch)
         self.writer.add_scalar('val/objectness_loss', ObjectnessLoss / batch, epoch)
         self.writer.add_scalar('val/cls_loss', ClsLoss / batch, epoch)
+        self.writer.add_scalar('val/dist_loss', DistLoss / batch, epoch)
 
         # running inference and saving to tensorboard
         infer_args = self.args

@@ -31,7 +31,7 @@ def get_aug(aug, min_area=0., min_visibility=0.):
                                                min_visibility=min_visibility, label_fields=['category_id']))
 
 
-def visualize_bbox(img, bbox, class_id, class_idx_to_name, color=None, thickness=2, bbox_format='yolo', Normalized=True):
+def visualize_bbox(img, bbox, class_id, class_idx_to_name, dist=None, color=None, thickness=2, bbox_format='yolo', Normalized=True):
     if not color:
         color = BOX_COLOR
 
@@ -53,8 +53,14 @@ def visualize_bbox(img, bbox, class_id, class_idx_to_name, color=None, thickness
     cv2.rectangle(img, (x_min, y_min), (x_max, y_max), color=color, thickness=thickness)
     class_name = class_idx_to_name[class_id]
     ((text_width, text_height), _) = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)
-    cv2.rectangle(img, (x_min, y_min - int(1.3 * text_height)), (x_min + text_width, y_min), BOX_COLOR, -1)
+    cv2.rectangle(img, (x_min, y_min - int(1.3 * text_height)), (x_min + text_width, y_min), color=color, thickness=-1)
     cv2.putText(img, class_name, (x_min, y_min - int(0.3 * text_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.35,TEXT_COLOR, lineType=cv2.LINE_AA)
+
+    if dist is not None:
+        # cv2.rectangle(img, (x_min, y_max), (x_min + text_width, y_max + int(1.3 * text_height)), color=color, thickness=1)
+        disttxt = "{:.3f}".format(dist)
+        cv2.putText(img, disttxt, (x_min, y_max + int(1.3 * text_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.35,color=color, lineType=cv2.LINE_AA)
+
     return img
 
 
@@ -64,16 +70,17 @@ def visualize(annotations, category_id_to_name, Normalized=True, color=None, plo
 
     img = annotations['image'].copy()
     img = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    for idx, bbox in enumerate(annotations['bboxes']):
+    # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    for bbox, cls_id, dist in zip(annotations['bboxes'], annotations['category_id'], annotations['dist']):
         if bbox[0] <= 0:
             continue
         # if np.size(bbox) == 5:
-        img = visualize_bbox(img, bbox[:4], int(annotations['category_id'][idx]), category_id_to_name, Normalized=Normalized, color=color)
+        img = visualize_bbox(img, bbox[:4], int(cls_id), category_id_to_name, dist=dist,
+                             Normalized=Normalized, color=color)
         # else:
         #     img = visualize_bbox(img, bbox, annotations['category_id'][idx], category_id_to_name, Normalized=Normalized, color=color)
 
-
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     if plot:
         cv2.imshow('image', img)
         cv2.waitKey(1)

@@ -27,7 +27,7 @@ class Inference(object):
         # defining yolo detection layer:
         self.yolo_loss = YoloDetectionLayer(self.args)
 
-        logging.info('Defining trainer...')
+        logging.info('Defining detector...')
 
         # Define dataloader
         kwargs = {'batch_size': 1, 'num_workers': args.workers, 'pin_memory': True}
@@ -49,7 +49,6 @@ class Inference(object):
 
         total_detction_time = 0.0
         num_frames = 0.
-        out_images = []
         for b, sample in enumerate(self.data_loader):
             if num_batches:
                 if b >= num_batches:
@@ -58,8 +57,8 @@ class Inference(object):
 
             image, bboxes = sample["image"], sample["bboxes"]
 
-            if b == 0 and num_batches:
-                out_images = torch.zeros(num_batches, image.shape[1], image.shape[2], image.shape[3])
+            if b == 0:
+                out_images = torch.zeros(1, image.shape[1], image.shape[2], image.shape[3])
 
             if self.args.cuda:
                 image, bboxes = image.cuda(), bboxes.cuda()
@@ -107,14 +106,14 @@ class Inference(object):
                         boxes[:, 3] = y2
 
                         curr_detection_idx = nms(boxes=boxes,
-                                                 scores=confident_bboxes[predicted_cls==curr_cls, 5 + curr_cls],
+                                                 scores=confident_bboxes[predicted_cls==curr_cls, 6 + curr_cls],
                                                  iou_threshold=self.args.nms_thres)
 
                         curr_bboxes = confident_bboxes[curr_detection_idx, :4]
-                        curr_dist = confident_bboxes[curr_detection_idx, 5]
+                        curr_dist = confident_bboxes[curr_detection_idx, 5].view(-1, 1)
                         curr_cls = torch.Tensor(curr_detection_idx.shape[0], 1).cuda().fill_(curr_cls)
 
-                        detections.append(torch.cat((curr_bboxes, curr_cls), dim=1))
+                        detections.append(torch.cat((curr_bboxes, curr_cls, curr_dist), dim=1))
 
                     detections = torch.cat(detections, dim=0).cpu().numpy()
 
@@ -122,28 +121,33 @@ class Inference(object):
 
                 # category_id_to_name = {0: 'Window', 1: 'door'}
 
+                out_image = image.squeeze(0).permute(1, 2, 0).cpu().numpy()
 
-                annotation = {'image': image.squeeze(0).permute(1, 2, 0).cpu().numpy(),
-                              'bboxes': detections[..., :4],
-                              'category_id': detections[..., 4]}
+                pred_bboxes = detections[..., :4]
+                pred_cls = detections[..., 4]
+                pred_dist = detections[..., 5]
 
                 try:
-                    out_image = visualize(annotation, self.label_decoder, Normalized=False, color=(0, 0, 1))
+                    # if num_batches:
+                    # adding groudtruth boxes
+                    gt_boxes = bboxes[bboxes.sum(dim=-1) > 0][..., :4]
+                    gt_dist = bboxes[bboxes.sum(dim=-1) > 0][..., 4].cpu().numpy()
+                    gt_id = bboxes[bboxes.sum(dim=-1) > 0][..., 5].cpu().numpy()
+                    annotation = {'image': out_image,
+                                  'bboxes': gt_boxes,
+                                  'category_id': gt_id,
+                                  'dist': gt_dist}
 
+                    out_image = visualize(annotation, self.label_decoder, Normalized=True, color=(0, 1, 0))
 
-                    if num_batches:
-                        # adding groudtruth boxes
-                        gt_boxes = bboxes[bboxes.sum(dim=-1) > 0][..., :4]
-                        gt_id = bboxes[bboxes.sum(dim=-1) > 0][..., 4].cpu().numpy()
+                    annotation = {'image': out_image,
+                                  'bboxes': pred_bboxes,
+                                  'category_id': pred_cls,
+                                  'dist': pred_dist}
 
-                        annotation = {'image': out_image,
-                                      'bboxes': gt_boxes,
-                                      'category_id': gt_id}
-
-                        out_image = visualize(annotation, self.label_decoder, Normalized=True, color=(0, 1, 0))
-
-
-                        out_images[b, ...] = torch.tensor(out_image).permute(2, 1, 0)
+                    # detected image
+                    out_image = visualize(annotation, self.label_decoder, Normalized=False, color=(1, 0, 0))
+                    out_images = torch.cat((out_images, torch.tensor(out_image).permute(2, 1, 0).unsqueeze(0)), dim=0)
 
                 except Exception as e:
                     print(e)
@@ -159,6 +163,13 @@ class Inference(object):
 
 
                 total_detction_time += (t_preds - t0)*1e3 + (t_nms - t_preds) * 1e3
+
+                # cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+
+                cv2.imshow("output", cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB))
+                # cv2.resizeWindow("output", 1000, 1000)
+                cv2.waitKey(0)
+                # cv2.destroyAllWindows()
         cv2.destroyAllWindows()
 
         logging.info('average detection time: %.3f[msec]' % (total_detction_time / num_frames))
@@ -171,58 +182,65 @@ if __name__ == "__main__":
     parser.add_argument('--val-data', type=str,
                         required=True,
                         help='path to parent database root. its childern is images/ and /labels')
+
     parser.add_argument('--model', type=str, default='yolov3-tiny',
                         choices=['yolov3-tiny', 'yolov3'],
                         help='yolo models. can be one of: yolov3-tiny, yolov3')
-    parser.add_argument('--batch-size', type=int, default=4,
+    parser.add_argument('--batch-size', type=int, default=14,
                         help='train batch size')
     parser.add_argument('--img-size', type=int, default=416,
                         help='image size')
-    parser.add_argument('--epochs', type=int, default=500,
+    parser.add_argument('--epochs', type=int, default=20,
                         help='number of epochs to train (default: auto)')
-    parser.add_argument('--lr', type=float, default=0.00001, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',
                         help='learning rate (default: auto)')
     parser.add_argument('--momentum', type=float, default=0.9,
                         help='momentum')
     parser.add_argument('--weight-decay', type=float, default=5e-4,
                         metavar='M', help='w-decay (default: 5e-4)')
-    parser.add_argument('--weights', type=str, default=None,
+    parser.add_argument('--weights', type=str, default='',
                         help='path to pretrained weights')
-    parser.add_argument('--gpu-ids', type=str, default='0',
+    parser.add_argument('--gpu-ids', type=str, default='1, 0',
                         help='use which gpu to train, must be a \
                                comma-separated list of integers only (default=0)')
-    parser.add_argument('--workers', type=int, default=4,
+    parser.add_argument('--workers', type=int, default=16,
                         metavar='N', help='dataloader threads')
-    parser.add_argument('--nms-thres', type=float, default=0.1,
-                        help='non max suppression bbox iou threshold')
-    parser.add_argument('--conf-thres', type=float, default=0.5,
-                        help='object prediction confidence threshold')
-
 
     # classes and anchors:
-    parser.add_argument('--num-classes', type=int, default=5,
-                        help="number of classes")
+    # parser.add_argument('--num-classes', type=int, default=KzirDataset().label_decoding,
+    #                     help="number of classes")
     parser.add_argument('--anchors', type=str,
                         default='[10,13],[16,30],[33,23],[30,61],[62,45],[59,119],[116,90],[156,198],[373,326]',
                         help='lists of anchors. each anchor are given as lists separated by coma: [x1,y1],[x2,y2],..')
     parser.add_argument('--num-anchors-per-resolution', type=int,
                         default=3,
                         help='lists of anchors. each anchor are given as lists separated by coma: [x1,y1],[x2,y2],..')
+    # dataset type
     parser.add_argument('--dataset-type', type=str,
-                        default='kzir',
-                        help='dataset type. one of kitti, kzir')
+                        default='distance',
+                        help='dataset type')
     # checking point
-    parser.add_argument('--resume', type=str, default=None,
-                        help='put the path to resuming file if needed')
-    parser.add_argument('--checkname', type=str, default=None,
+    parser.add_argument('--resume', action='store_true',
+                        help='is given, will resu,e training from loaded checkpoint including learning rate')
+    parser.add_argument('--checkpoint', type=str, default='model_best.pth',
                         help='set the checkpoint name')
-    parser.add_argument('--output-path', type=str, default=os.getcwd() + "/YoloV3/results/model_best.pth",
+    parser.add_argument('--output-path', type=str, default=os.getcwd() + "/YoloV3/results",
                         help='output path')
+
+    # detection parameters
+    parser.add_argument('--nms-thres', type=float, default=0.1,
+                        help='non max suppression bbox iou threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.5,
+                        help='object prediction confidence threshold')
+    parser.add_argument('--dist-norm', type=float, default=30.0,
+                        help='normalize distance by this size')
 
 
     args, unknow_args = parser.parse_known_args()
 
     logging.info('input parameters: {}'.format(args))
+    # getting number of classes from dataloader
+    args.num_classes = len(DistanceEstimationDataset(args, split='val').label_decoding().keys())
 
     # parsing anchors:
     anchors = args.anchors.replace('[',',').replace(']',',').split(',')
@@ -233,13 +251,15 @@ if __name__ == "__main__":
     if np.size(args.img_size) == 1:
         args.img_size = [args.img_size, args.img_size]
 
-        # selecting model from user inputs
-        if args.model == 'yolov3-tiny':
-            model = YoloV3_tiny(args)
-        elif args.model == 'yolov3':
-            model = YoloV3(args)
-        else:
-            raise ("currently supporting only yolov3_or yolov3 tiny")
+
+
+    # selecting model from user inputs
+    if args.model == 'yolov3-tiny':
+        model = YoloV3_tiny(args)
+    elif args.model == 'yolov3':
+        model = YoloV3(args)
+    else:
+        raise ("currently supporting only yolov3_or yolov3 tiny")
 
     args.cuda = torch.cuda.is_available()
     if args.cuda:

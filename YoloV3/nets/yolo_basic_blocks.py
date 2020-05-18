@@ -89,7 +89,7 @@ class YoloDetectionLayer(nn.Module):
 
         # thresholds
         self.iou_threshold = 0.5
-        self.lambda_coord = 2
+        self.lambda_coord = 5
         self.lambda_dist = 5
         self.lambda_obj = 1.0
         self.lambda_noobj = 1.0
@@ -180,7 +180,7 @@ class YoloDetectionLayer(nn.Module):
             cls_loss = self.lambda_cls * loss_cls
             dist_loss = self.lambda_dist * loss_d
             #TODO: add distance loss
-            loss_total = bbox_loss + objectness_loss + cls_loss
+            loss_total = bbox_loss + objectness_loss + cls_loss + dist_loss
 
             # this is for safety... just incase no gt targets are provided checking if loss is not nan due to no objects
             # if this happens, the only loss is no obj loss ( which should have indicated no objects in the image
@@ -188,9 +188,10 @@ class YoloDetectionLayer(nn.Module):
                 bbox_loss = torch.zeros_like(bbox_loss, requires_grad=True)
                 objectness_loss = self.lambda_noobj * loss_noobj
                 cls_loss = torch.zeros_like(cls_loss, requires_grad=True)
+                dist_loss = torch.zeros_like(dist_loss, requires_grad=True)
                 loss_total = bbox_loss + objectness_loss + cls_loss
 
-            return loss_total, bbox_loss, objectness_loss, cls_loss
+            return loss_total, bbox_loss, objectness_loss, cls_loss, dist_loss
 
         else:
             """ INFERENCE """
@@ -246,7 +247,7 @@ class YoloDetectionLayer(nn.Module):
             pred_bboxes = pred_bboxes.view(batch_size, -1, 4)
             pred_conf = pred_conf.view(batch_size, -1, 1)
             pred_cls = pred_cls.view(batch_size, -1, self.num_classes)
-            pred_dist =pred_dist.view(batch_size, -1, 1)
+            pred_dist = pred_dist.view(batch_size, -1, 1)
 
             pred_out = torch.cat((pred_bboxes, pred_conf, pred_dist, pred_cls), -1)
 
