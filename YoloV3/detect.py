@@ -15,6 +15,10 @@ from DeepTools.tensorboard_writer.summaries import TensorboardSummary
 import cv2
 import time
 from DeepTools.data_augmentations.detection.custom_transforms import visualize
+from YoloV3.utils.performence_measures import distance_over_IoU_thresh
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+from sklearn.linear_model import LinearRegression
 
 class Inference(object):
     def __init__(self, args, model):
@@ -42,22 +46,24 @@ class Inference(object):
 
         self.label_decoder = {v: k for k, v in dataset.label_decoding().items()}
 
-    def infer(self, num_batches=None):
+    def infer(self, batch_inference=None):
 
         model = self.model
         model.eval()
 
         total_detction_time = 0.0
         num_frames = 0.
+        GT_DIST = np.array([])
+        PRED_DIST = np.array([])
         for b, sample in enumerate(self.data_loader):
-            if num_batches:
-                if b >= num_batches:
+            if batch_inference:
+                if b >= batch_inference:
                     break
 
 
             image, bboxes = sample["image"], sample["bboxes"]
 
-            if b == 0:
+            if b == 0 or batch_inference is None:
                 out_images = torch.zeros(1, image.shape[1], image.shape[2], image.shape[3])
 
             if self.args.cuda:
@@ -125,20 +131,29 @@ class Inference(object):
 
                 pred_bboxes = detections[..., :4]
                 pred_cls = detections[..., 4]
-                pred_dist = detections[..., 5]
+                pred_dist = detections[..., 5] * self.args.dist_norm
 
                 try:
                     # if num_batches:
                     # adding groudtruth boxes
-                    gt_boxes = bboxes[bboxes.sum(dim=-1) > 0][..., :4]
-                    gt_dist = bboxes[bboxes.sum(dim=-1) > 0][..., 4].cpu().numpy()
-                    gt_id = bboxes[bboxes.sum(dim=-1) > 0][..., 5].cpu().numpy()
+                    bboxes = bboxes[bboxes.sum(dim=-1) > 0].cpu().numpy()
+                    bboxes[..., 4] = bboxes[..., 4] * self.args.dist_norm
+                    gt_boxes = bboxes[..., :4]
+                    gt_dist = bboxes[..., 4]# * self.args.dist_norm
+                    gt_id = bboxes[..., 5]
                     annotation = {'image': out_image,
                                   'bboxes': gt_boxes,
                                   'category_id': gt_id,
                                   'dist': gt_dist}
 
-                    out_image = visualize(annotation, self.label_decoder, Normalized=True, color=(0, 1, 0))
+                    out_image = visualize(annotation, self.label_decoder, Normalized=True, color=(1, 1, 0))
+
+                    h, w, _ = out_image.shape
+
+                    pred_bboxes[:, 0] /= w
+                    pred_bboxes[:, 1] /= h
+                    pred_bboxes[:, 2] /= w
+                    pred_bboxes[:, 3] /= h
 
                     annotation = {'image': out_image,
                                   'bboxes': pred_bboxes,
@@ -146,8 +161,30 @@ class Inference(object):
                                   'dist': pred_dist}
 
                     # detected image
-                    out_image = visualize(annotation, self.label_decoder, Normalized=False, color=(1, 0, 0))
-                    out_images = torch.cat((out_images, torch.tensor(out_image).permute(2, 1, 0).unsqueeze(0)), dim=0)
+                    out_image = visualize(annotation, self.label_decoder, Normalized=True, color=(1, 0, 0))
+                    if batch_inference is None:
+                        out_images = torch.tensor(out_image).permute(2, 1, 0).unsqueeze(0)
+
+                    else:
+                        out_images = torch.cat((out_images, torch.tensor(out_image).permute(2, 1, 0).unsqueeze(0)), dim=0)
+
+                    predBOXES = np.concatenate([pred_bboxes, pred_dist.reshape(-1, 1), pred_cls.reshape(-1, 1)], axis=1)
+                    gtBOXES = bboxes
+
+                    # analyzing results
+                    curr_gt_dist, curr_pred_dist = distance_over_IoU_thresh(gtBOXES, predBOXES, IoUth=0.95)
+
+                    if curr_gt_dist.size > 0:
+                        if GT_DIST.size == 0:
+                            GT_DIST = curr_gt_dist
+                        else:
+                            GT_DIST = np.vstack((GT_DIST, curr_gt_dist))
+
+                    if curr_pred_dist.size > 0:
+                        if PRED_DIST.size == 0:
+                            PRED_DIST = curr_pred_dist
+                        else:
+                            PRED_DIST = np.vstack((PRED_DIST, curr_pred_dist))
 
                 except Exception as e:
                     print(e)
@@ -164,15 +201,31 @@ class Inference(object):
 
                 total_detction_time += (t_preds - t0)*1e3 + (t_nms - t_preds) * 1e3
 
-                # cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+                cv2.namedWindow("output", cv2.WINDOW_NORMAL)
 
                 cv2.imshow("output", cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB))
-                # cv2.resizeWindow("output", 1000, 1000)
-                cv2.waitKey(0)
+                cv2.resizeWindow("output", 512, 512)
+                cv2.waitKey(1)
                 # cv2.destroyAllWindows()
         cv2.destroyAllWindows()
 
         logging.info('average detection time: %.3f[msec]' % (total_detction_time / num_frames))
+
+        # display distance stats:
+        plt.figure()
+        plt.title('distance estimation')
+        plt.scatter(GT_DIST, PRED_DIST, marker='x', c='b')
+        plt.xlabel('gt [m]')
+        plt.ylabel('pred [m]')
+
+        lr_model = np.polyfit(GT_DIST[:,0], PRED_DIST[:,0], 1) # perform linear regression
+        dist_lr_pred = GT_DIST * lr_model[0] + lr_model[1]
+        dist_rmse = np.sqrt(mean_squared_error(GT_DIST[:,0], PRED_DIST[:,0]))
+        plt.plot(GT_DIST, dist_lr_pred, c='r')
+        plt.text(4.5, 4.2, "y={:.5f}*x + {:.5f}\nRMSE={:.5f}".format(lr_model[0], lr_model[1], dist_rmse))
+        plt.title('IoU=0.95')
+        # plt.xlim((3, 7.5))
+        # plt.ylim((3, 8))
         return out_images
 
 if __name__ == "__main__":
@@ -282,5 +335,5 @@ if __name__ == "__main__":
     inference = Inference(args, model).infer()
 
     logging.info("inference finished")
-
+    plt.show()
 
