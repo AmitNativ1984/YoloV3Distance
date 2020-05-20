@@ -1,0 +1,13 @@
+# model parameters:
+--model yolov3
+--batch-size 1
+--img-size 416
+--anchors [18,28],[22,64],[51,29],[41,126],[87,52],[33,97],[53,155],[61,191],[82,232]
+
+# database and classes
+--dataset-type distance
+--val-data ./YoloV3/data/datasets/DistanceEstimation/shvil2BenShemenTrain.txt
+
+# checking point
+--output-path ./YoloV3/results/Dist_Estimation/bestDist.pth
+
