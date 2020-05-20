@@ -226,7 +226,7 @@ class Trainer(object):
         # running inference and saving to tensorboard
         infer_args = self.args
         infer_args.batch_size = 1
-        out_images = Inference(infer_args, model).infer(num_batches=5)
+        out_images = Inference(infer_args, model).infer(batch_inference=5)
         self.writer.add_image('detections', out_images, global_step=epoch, dataformats='NCWH')
 
         # torch.cuda.empty_cache()
