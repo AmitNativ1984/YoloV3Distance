@@ -121,16 +121,16 @@ class DistanceEstimationDataset(Dataset):
 
         transforms = ([OneOf([Blur(p=0.5, blur_limit=(3, 10)),
                               MotionBlur(p=0.5, blur_limit=(3, 20))], p=0.2),
-                       Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
-                              p=1.0),
+                       # Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
+                       #        p=1.0),
                       # padding image in case is too small
-                      PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
-                                  border_mode=cv2.BORDER_REPLICATE,
-                                  p=1.0),
+                      # PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
+                      #             border_mode=cv2.BORDER_REPLICATE,
+                      #             p=1.0),
                       # changing image size - mainting aspect ratio for later resize
-                      OneOf([RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=0.5),
-                              RandomCrop(height=int(random_scale * self.args.img_size[0]),
-                                         width=int(random_scale * self.args.img_size[1]), p=0.5)], p=1.0),
+                      # OneOf([RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=0.5),
+                      #         RandomCrop(height=int(random_scale * self.args.img_size[0]),
+                      #                    width=int(random_scale * self.args.img_size[1]), p=0.5)], p=1.0),
                       # flipping / rotating
                       OneOf([HorizontalFlip(p=0.5),
                             ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.1, rotate_limit=5)], p=0.5),
@@ -168,15 +168,15 @@ class DistanceEstimationDataset(Dataset):
 
         annotations = {'image': img, 'bboxes': bboxes}
 
-        transforms = ([Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
-                              p=1.0),
-                       PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
-                                   border_mode=cv2.BORDER_REPLICATE,
-                                   p=1.0),
+        transforms = ([#Resize(height=int(scale_factor * imgH), width=int(scale_factor * imgW),
+                        #      p=1.0),
+                       # PadIfNeeded(min_height=self.args.img_size[0], min_width=self.args.img_size[1],
+                       #             border_mode=cv2.BORDER_REPLICATE,
+                       #             p=1.0),
                        # changing image size - mainting aspect ratio for later resize
-                       OneOf([RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=0.5),
-                              RandomCrop(height=int(random_scale * self.args.img_size[0]),
-                                         width=int(random_scale * self.args.img_size[1]), p=0.5)], p=1.0),
+                       # OneOf([RandomCrop(height=self.args.img_size[0], width=self.args.img_size[1], p=0.5),
+                       #        RandomCrop(height=int(random_scale * self.args.img_size[0]),
+                       #                   width=int(random_scale * self.args.img_size[1]), p=0.5)], p=1.0),
                        # making sure resize fits with yolo input size
                        Resize(height=self.args.img_size[0], width=self.args.img_size[1], p=1.0),
                        Normalize(p=1.0)])
