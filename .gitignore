@@ -7,3 +7,4 @@ kitti_bbox_wh.txt
 *.onnx
 *events.out*
 *.weights
+*.png
